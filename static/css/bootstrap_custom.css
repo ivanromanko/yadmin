@@ -1,0 +1,47 @@
+.table thead th {
+  /*vertical-align: bottom;*/
+  vertical-align: middle;
+  text-align: left;
+  background-color: #DDD;
+}
+tr td:first-child {
+    text-align: center;
+}
+
+body {
+    padding: 45px 0px 0px;
+}
+
+.main-menu {
+    max-height: 600px;
+    overflow: hidden;
+    overflow-y: auto;
+}
+
+.remove-bullets {
+    list-style: none;
+}
+
+input[type='text'] {
+    height: 12px;
+    margin-bottom: 0px;
+}
+
+select {
+    height: 20px;
+    margin-bottom: 0px;
+    padding: 0px;
+}
+
+/*button {
+    margin-bottom: 0px;
+}*/
+
+span.input-prepend {
+    padding-left: 5px;
+}
+
+span.input-prepend .add-on {
+    line-height: 12px;
+    height: 12px;
+}

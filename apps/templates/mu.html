@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8">
+    <title>Управление учётными записями </title>
+
+    <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css">
+    <!-- <link rel="stylesheet" href="/static/css/bootstrap.css"> -->
+    <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
+    <link rel="shortcut icon" href="http://twitter.github.com/bootstrap/assets/ico/favicon.ico">
+
+    <script src="http://yandex.st/jquery/1.8.0/jquery.min.js"></script>
+    <script src="http://twitter.github.com/bootstrap/assets/js/bootstrap.js"></script>
+    <script src="http://cloud.github.com/downloads/wycats/handlebars.js/handlebars-1.0.0.beta.6.js"></script>
+    <script src="https://raw.github.com/nikonor/OTCLASS.js/master/otclass.js"></script>
+    <script src="/static/js/umb-navigation_new.js"></script>
+    
+    <script id="users_tmpl" type="text/x-handlebars-template">
+        {% raw %}
+            {{#each items}}
+                <tr data-name={{this.name}}>
+                    <td>
+                        <p> {{this.name}} </p>
+                    </td>
+                </tr>
+            {{/each}}
+        {% endraw %}
+    </script>
+
+    <script type="text/javascript">
+        $(document).ready(function(){
+            var server_start_time = {{server_start_time}},
+                last_sync = localStorage.getItem('yadmin_users_list_last_sync_time');
+            
+            // Проверяем актуальность списка пользователей
+            if (last_sync != server_start_time) {
+                localStorage.setItem('yadmin_users_list_last_sync_time', String(server_start_time));
+                console.log('last_sync', last_sync, 'server_start_time', server_start_time);
+                console.log('refreshing');
+                refresh_users_list()
+                    .done(function(data){
+                        initial_draw();
+                    });
+            } else {
+                initial_draw();
+            }
+            
+            // Вешаем событие на нажатия кнопок.
+            $(document).on('click', 'div.btn-group button:even', function(){
+                $('div.btn-group button.btn-primary').removeClass('btn-primary');
+                $(this).addClass('btn-primary').next().addClass('btn-primary');
+                console.log($(this), 'was clicked');
+                draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain'))));
+            })
+
+            
+            
+            
+            
+        }) // document.ready
+
+        function initial_draw(){
+            console.log('initial_draw');
+            var first_button = $('div.btn-toolbar').find('div.btn-group').eq(0).find('button').eq(0);
+            first_button.addClass('btn-primary').next().addClass('btn-primary');
+            draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+first_button.data('domain'))));
+        }
+
+
+        function refresh_users_list(){
+            return $.getJSON('/mu', {do_what: 'refresh_users_list'}).done(function(data){
+                if (data.success){
+                    $.each(data.items, function(key, val){
+                        localStorage.setItem('yadmin_users_'+key, JSON.stringify(val));    
+                    })
+                    console.log('Список пользователей обновлён');
+                    $(document).trigger('users_list_freshness_ok');
+                }
+                
+            });
+            
+        }
+
+        function draw_users(users){
+            var users_template = Handlebars.compile($('#users_tmpl').html());
+            $("#table_users_list tbody").empty().append(users_template({items: users}));
+        }
+
+
+        function list_users_ajax(nav_params){
+                var users_template = Handlebars.compile($('#users_tmpl').html()),
+                    params = {do_what:'list_users_ajax'};
+                $.each(['filter_name'], function(index, value){
+                            var f_val = $("#"+value).val();
+                            if (f_val != '' && f_val != 0){
+                                params[value] = f_val;
+                            }
+                        })
+                if (nav_params){
+                    for (var i in nav_params){
+                        params[i] = nav_params[i];
+                    }
+                }
+                
+                return $.getJSON(
+                    '/mu',
+                    params,
+                    function(data){
+                        if (!data.success) {
+                            $('.errorDiv').show();
+                            return;
+                        }
+                        console.log(data);
+                        $("#table_users_list tbody").empty().append(users_template(data));
+                        
+                    }
+                )
+            }
+    </script>
+</head>
+
+<body>
+    <div class='container'>
+        <div class="navbar">
+            <div class="navbar-inner">
+                <div class='btn-toolbar'>
+                    {% for i in domains %}
+                        <div class="btn-group">
+                            <button class="btn" data-domain="{{ i }}" data-do_what="list_users"> {{ i }}
+                                <button class="btn dropdown-toggle" data-toggle="dropdown">
+                                    <span class="caret"></span>
+                                </button>
+                                <ul class='dropdown-menu'>
+                                    <li><a href="#">Настройки домена</a></li>
+                                </ul>
+                            </li>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="tab-content">
+            <table id="table_users_list" class="table table-condensed table-bordered">
+                <thead>
+                    <tr>
+                        <th>Имя <input type="text" placeholder="Отбор" id="filter_name"></th>
+                    </tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="container-fluid">
+            <span class='span4 offset4'id="dp_nav"></span>
+        </div>
+    </div>
+    
+</body>
+</html>
