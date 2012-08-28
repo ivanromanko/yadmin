@@ -26,9 +26,9 @@
                 </thead>
                 <tbody>
                     {{#each items}}
-                        <tr data-name={{this.name}}>
+                        <tr data-name={{this}}>
                             <td class='no_select_on_dbl_click'>
-                                {{this.name}}
+                                {{this}}
                             </td>
                         </tr>
                     {{/each}}
@@ -42,7 +42,10 @@
             var server_start_time = {{server_start_time}},
                 last_sync = localStorage.getItem('yadmin_users_list_last_sync_time');
             
-            $('#filter_str').typeahead().on('change', filter_users);
+            // $('#filter_str').on('change', function(){
+            //     filter_users();  
+            // })
+
             $("#btn_filter_users").on('click', function(e){
                 filter_users();
                 e.preventDefault();
@@ -73,8 +76,9 @@
             $(document).on('click', 'div.btn-group button:even', function(){
                 $('div.btn-group button.btn-primary').removeClass('btn-primary');
                 $(this).addClass('btn-primary').next().addClass('btn-primary');
-                console.log($(this), 'was clicked');
-                draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain'))));
+                // console.log($(this), 'was clicked');
+                localStorage.setItem('current_domain', $(this).data('domain'));
+                draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain')))));
             })
 
         }) // document.ready
@@ -83,20 +87,34 @@
             console.log('initial_draw');
             var first_button = $('div.btn-toolbar').find('div.btn-group').eq(0).find('button').eq(0);
             first_button.addClass('btn-primary').next().addClass('btn-primary');
-            draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+first_button.data('domain'))));
+            draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+first_button.data('domain')))));
+            localStorage.setItem('current_domain', first_button.data('domain'));
         }
 
         function draw_users(users){
             // Обновляем таблицу
             var users_template = Handlebars.compile($('#users_tmpl').html());
             $("#users_table").empty().append(users_template({items: users}));
-            
-            // Обновляем автозаполнение в строке поиска
-            var tmp = [];
+        }
+
+        function filter_users(){
+            var search_str = $("#filter_str").val(),
+                users = JSON.parse(localStorage.getItem('yadmin_users_'+localStorage.getItem('current_domain'))),
+                tmp = convert_users_to_list(users);
+
+            var res = $.grep(tmp, function(elem){
+                return elem.indexOf(search_str)+1;
+            })
+            console.log(res);
+            draw_users(res);
+        }
+
+        function convert_users_to_list(users){
+            var tmp=[];
             for (var i in users){
                 tmp.push(users[i]['name']);
             }
-            $('#filter_str').data('typeahead').source = tmp;
+            return tmp
         }
 
         function refresh_users_list(){
@@ -109,12 +127,6 @@
                     $(document).trigger('users_list_freshness_ok');
                 } 
             });
-        }
-
-        function filter_users(){
-            var users_template = Handlebars.compile($('#users_tmpl').html());
-            var tmp = [{name: $("#filter_str").val()}];
-            $("#users_table").empty().append(users_template({items: tmp}));
         }
     </script>
 </head>
@@ -143,7 +155,7 @@
         <!-- <div class="tab-content"> -->
         <form class="form-search">
           <div class="input-append">
-            <input type="text" placeholder="Имя" id="filter_str" class="search-query" data-provide="typeahead" autocomplete="off">
+            <input type="text" placeholder="Имя" id="filter_str" class="search-query" autocomplete="off">
             <button id="btn_filter_users" class="btn">Отбор</button>
           </div>
         </form>
