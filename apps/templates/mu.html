@@ -10,20 +10,30 @@
     <link rel="shortcut icon" href="http://twitter.github.com/bootstrap/assets/ico/favicon.ico">
 
     <script src="http://yandex.st/jquery/1.8.0/jquery.min.js"></script>
-    <script src="http://twitter.github.com/bootstrap/assets/js/bootstrap.js"></script>
+    <!--<script src="http://twitter.github.com/bootstrap/assets/js/bootstrap.js"></script> -->
+    <script src="/static/js/bootstrap.js"></script>
     <script src="http://cloud.github.com/downloads/wycats/handlebars.js/handlebars-1.0.0.beta.6.js"></script>
     <script src="https://raw.github.com/nikonor/OTCLASS.js/master/otclass.js"></script>
     <script src="/static/js/umb-navigation_new.js"></script>
     
     <script id="users_tmpl" type="text/x-handlebars-template">
         {% raw %}
-            {{#each items}}
-                <tr data-name={{this.name}}>
-                    <td>
-                        <p> {{this.name}} </p>
-                    </td>
-                </tr>
-            {{/each}}
+            <table id="table_users_list" class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Имя</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each items}}
+                        <tr data-name={{this}}>
+                            <td class='no_select_on_dbl_click'>
+                                {{this}}
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
         {% endraw %}
     </script>
 
@@ -31,6 +41,15 @@
         $(document).ready(function(){
             var server_start_time = {{server_start_time}},
                 last_sync = localStorage.getItem('yadmin_users_list_last_sync_time');
+            
+            // $('#filter_str').on('change', function(){
+            //     filter_users();  
+            // })
+
+            $("#btn_filter_users").on('click', function(e){
+                filter_users();
+                e.preventDefault();
+            });
             
             // Проверяем актуальность списка пользователей
             if (last_sync != server_start_time) {
@@ -40,6 +59,14 @@
                 refresh_users_list()
                     .done(function(data){
                         initial_draw();
+                        // demo = new OTCLASS({
+                        //   'id':'users_list',
+                        //   'data':tmp_data,
+                        //   'div_id': 'container',
+                        //   'tmpl_id': 'tmpl',
+                        //   'sort':'age',
+                        //   'debug':1
+                        // });
                     });
             } else {
                 initial_draw();
@@ -49,23 +76,46 @@
             $(document).on('click', 'div.btn-group button:even', function(){
                 $('div.btn-group button.btn-primary').removeClass('btn-primary');
                 $(this).addClass('btn-primary').next().addClass('btn-primary');
-                console.log($(this), 'was clicked');
-                draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain'))));
+                // console.log($(this), 'was clicked');
+                localStorage.setItem('current_domain', $(this).data('domain'));
+                draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain')))));
             })
 
-            
-            
-            
-            
         }) // document.ready
 
         function initial_draw(){
             console.log('initial_draw');
             var first_button = $('div.btn-toolbar').find('div.btn-group').eq(0).find('button').eq(0);
             first_button.addClass('btn-primary').next().addClass('btn-primary');
-            draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+first_button.data('domain'))));
+            draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+first_button.data('domain')))));
+            localStorage.setItem('current_domain', first_button.data('domain'));
         }
 
+        function draw_users(users){
+            // Обновляем таблицу
+            var users_template = Handlebars.compile($('#users_tmpl').html());
+            $("#users_table").empty().append(users_template({items: users}));
+        }
+
+        function filter_users(){
+            var search_str = $("#filter_str").val(),
+                users = JSON.parse(localStorage.getItem('yadmin_users_'+localStorage.getItem('current_domain'))),
+                tmp = convert_users_to_list(users);
+
+            var res = $.grep(tmp, function(elem){
+                return elem.indexOf(search_str)+1;
+            })
+            console.log(res);
+            draw_users(res);
+        }
+
+        function convert_users_to_list(users){
+            var tmp=[];
+            for (var i in users){
+                tmp.push(users[i]['name']);
+            }
+            return tmp
+        }
 
         function refresh_users_list(){
             return $.getJSON('/mu', {do_what: 'refresh_users_list'}).done(function(data){
@@ -75,47 +125,9 @@
                     })
                     console.log('Список пользователей обновлён');
                     $(document).trigger('users_list_freshness_ok');
-                }
-                
+                } 
             });
-            
         }
-
-        function draw_users(users){
-            var users_template = Handlebars.compile($('#users_tmpl').html());
-            $("#table_users_list tbody").empty().append(users_template({items: users}));
-        }
-
-
-        function list_users_ajax(nav_params){
-                var users_template = Handlebars.compile($('#users_tmpl').html()),
-                    params = {do_what:'list_users_ajax'};
-                $.each(['filter_name'], function(index, value){
-                            var f_val = $("#"+value).val();
-                            if (f_val != '' && f_val != 0){
-                                params[value] = f_val;
-                            }
-                        })
-                if (nav_params){
-                    for (var i in nav_params){
-                        params[i] = nav_params[i];
-                    }
-                }
-                
-                return $.getJSON(
-                    '/mu',
-                    params,
-                    function(data){
-                        if (!data.success) {
-                            $('.errorDiv').show();
-                            return;
-                        }
-                        console.log(data);
-                        $("#table_users_list tbody").empty().append(users_template(data));
-                        
-                    }
-                )
-            }
     </script>
 </head>
 
@@ -140,16 +152,19 @@
             </div>
         </div>
 
-        <div class="tab-content">
-            <table id="table_users_list" class="table table-condensed table-bordered">
-                <thead>
-                    <tr>
-                        <th>Имя <input type="text" placeholder="Отбор" id="filter_name"></th>
-                    </tr>
-                </thead>
-                <tbody></tbody>
-            </table>
+        <!-- <div class="tab-content"> -->
+        <form class="form-search">
+          <div class="input-append">
+            <input type="text" placeholder="Имя" id="filter_str" class="search-query" autocomplete="off">
+            <button id="btn_filter_users" class="btn">Отбор</button>
+          </div>
+        </form>
+        
+        <div id='users_table'>
+            
         </div>
+        
+        <!-- </div> -->
         <div class="container-fluid">
             <span class='span4 offset4'id="dp_nav"></span>
         </div>
