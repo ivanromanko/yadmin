@@ -32,7 +32,8 @@ def main(environ, start_response):
     functions = {
                  'list': {'exec': make_head},
                  'list_users_ajax': {'exec': list_users_ajax},
-                 'refresh_users_list': {'exec': refresh_users_list}
+                 'refresh_users_list': {'exec': refresh_users_list},
+                 'get_user_info': {'exec': get_user_info}
                  }
     if do_what not in functions:
         return ['<br><br><br><div align="center"><p>Произошло страшное</p></div>'.encode('utf-8')]
@@ -73,6 +74,31 @@ def refresh_users_list(mycgi, environ):
         users[i] = sorted(users[i], key=lambda x: x['name'])
         print('users from ', i, users[i])
     return {'items': users, 'success': 1}
+
+
+@decorators.dumpencode
+def get_user_info(mycgi, environ):
+    res = api[mycgi['domain']].getUserInfo(mycgi['login'])
+    print(res)
+    print(type(res))
+    res['signed_eula'] = 1 if res['signed_eula'] == '1' else ''
+    return {'items': res, 'success': 1}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

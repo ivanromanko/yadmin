@@ -15,6 +15,7 @@
     <script src="http://cloud.github.com/downloads/wycats/handlebars.js/handlebars-1.0.0.beta.6.js"></script>
     <script src="https://raw.github.com/nikonor/OTCLASS.js/master/otclass.js"></script>
     <script src="/static/js/umb-navigation_new.js"></script>
+    <script src="/static/js/otmes.js"></script>
     
     <script id="users_tmpl" type="text/x-handlebars-template">
         {% raw %}
@@ -26,8 +27,8 @@
                 </thead>
                 <tbody>
                     {{#each items}}
-                        <tr data-name={{this}}>
-                            <td class='no_select_on_dbl_click'>
+                        <tr>
+                            <td class='no_select_on_dbl_click' data-name={{this}}>
                                 {{this}}
                             </td>
                         </tr>
@@ -37,12 +38,64 @@
         {% endraw %}
     </script>
 
+    <script id="view_user_tmpl" type="text/x-handlebars-template">
+        {% raw %}
+            <div class="modal hide fade">
+              <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                <h3>{{ login }}</h3>
+              </div>
+              <div class="modal-body">
+                <form class="form-horizontal">
+                  <div class="control-group">
+                    <label class="control-label" for="input_iname">Имя</label>
+                    <div class="controls">
+                      <input type="text" id="input_iname" placeholder="Имя" value={{iname}}>
+                    </div>
+                  </div>
+                  <div class="control-group">
+                    <label class="control-label" for="input_fname">Фамилия</label>
+                    <div class="controls">
+                      <input type="text" id="input_fname" placeholder="Фамилия" value={{fname}}>
+                    </div>
+                  </div>
+                  <div class="control-group">
+                    <label class="control-label" for="input_bdate">Дата рождения</label>
+                    <div class="controls">
+                      <input type="text" id="input_bdate" placeholder="Дата рождения" value={{birth_date}}>
+                    </div>
+                  </div>
+                  <div class="control-group">
+                    <div class="controls">
+                      <label class="checkbox">
+                        <input type="checkbox" {{#if signed_eula}} checked {{/if}}> EULA
+                      </label>
+                    </div>
+                  </div>
+                </form>
+              </div>
+              <div class="modal-footer">
+                <a href="#" class="btn" data-dismiss="modal">Отмена</a>
+                <a href="#" class="btn btn-primary">Сохранить</a>
+              </div>
+            </div>
+        {% endraw %}
+    </script>
+
     <script type="text/javascript">
         $(document).ready(function(){
+            // Настройка вывода ошибок и информации
+            m = new otmes ('', {});
+            if (!localStorage.getItem('do_not_show_info_alert')) {
+                $('#info_alert').show();
+            }
+            
+            
+            // Подготовка данных об актуальности списка пользователей
             var server_start_time = {{server_start_time}},
                 last_sync = localStorage.getItem('yadmin_users_list_last_sync_time');
             
-            // $('#filter_str').on('change', function(){
+            // $('#filter_str').on('keydown', function(){
             //     filter_users();  
             // })
 
@@ -54,6 +107,7 @@
             // Проверяем актуальность списка пользователей
             if (last_sync != server_start_time) {
                 localStorage.setItem('yadmin_users_list_last_sync_time', String(server_start_time));
+                localStorage.removeItem('do_not_show_info_alert');
                 console.log('last_sync', last_sync, 'server_start_time', server_start_time);
                 console.log('refreshing');
                 refresh_users_list()
@@ -72,7 +126,7 @@
                 initial_draw();
             }
             
-            // Вешаем событие на нажатия кнопок.
+            // Вешаем события на различные действия
             $(document).on('click', 'div.btn-group button:even', function(){
                 $('div.btn-group button.btn-primary').removeClass('btn-primary');
                 $(this).addClass('btn-primary').next().addClass('btn-primary');
@@ -80,8 +134,27 @@
                 localStorage.setItem('current_domain', $(this).data('domain'));
                 draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain')))));
             })
+            $(document).on('dblclick', '#table_users_list td', function(){
+                view_user($(this).data('name'));
+            })
+            $(document).on('click', '#close_info_alert', function(){
+                localStorage.setItem('do_not_show_info_alert', 1);
+            })
 
         }) // document.ready
+        
+        function view_user(login){
+            view_user_modal = Handlebars.compile($('#view_user_tmpl').html())
+            $.getJSON('/mu', {do_what: 'get_user_info', login: login, domain: localStorage.getItem('current_domain')}).done(function(data){
+                if (data.success){
+                    console.log(data.items);
+                    $(view_user_modal(data.items)).modal();
+                } else{
+                    m.e(data.err);
+                    m.m(data.msg);
+                }
+            })
+        }
 
         function initial_draw(){
             console.log('initial_draw');
@@ -151,6 +224,10 @@
                 </div>
             </div>
         </div>
+        
+        <div id="divError"></div>
+        <div id="divMessage"></div>
+        <div id="divDebug"></div>
 
         <!-- <div class="tab-content"> -->
         <form class="form-search">
@@ -159,6 +236,10 @@
             <button id="btn_filter_users" class="btn">Отбор</button>
           </div>
         </form>
+        <div class="alert alert-info" style="display: none;" id="info_alert">
+            <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
+            Двойной клик на пользователе для редактирования
+        </div>
         
         <div id='users_table'>
             
