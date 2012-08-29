@@ -185,7 +185,12 @@ class UserApi(Base):
      @return ElementTree.Element
     '''
     def getUserInfo(self, login):
-        return self.invokeHandler('get_user_info', {'login' : login})
+        ret = {}
+        xml = self.invokeHandler('get_user_info', {'login' : login})
+        for i in ('login', 'birth_date', 'fname', 'iname', 'hinta', 'hintq', 'sex', 'signed_eula', 'mail_format', 'charset', 'nickname'):
+            ret[i] = xml.findtext('.//{}'.format(i))
+            print('\t\t', ret[i], type(ret[i]))
+        return ret
 
     '''
      @param int page

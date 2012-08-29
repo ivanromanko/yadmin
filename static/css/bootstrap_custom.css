@@ -4,9 +4,9 @@
   text-align: left;
   background-color: #DDD;
 }
-tr td:first-child {
+/*tr td:first-child {
     text-align: center;
-}
+}*/
 
 body {
     padding: 45px 0px 0px;
@@ -22,10 +22,10 @@ body {
     list-style: none;
 }
 
-input[type='text'] {
+/*input[type='text'] {
     height: 12px;
     margin-bottom: 0px;
-}
+}*/
 
 select {
     height: 20px;
@@ -44,4 +44,10 @@ span.input-prepend {
 span.input-prepend .add-on {
     line-height: 12px;
     height: 12px;
+}
+
+td.no_select_on_dbl_click {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -khtml-user-select: none;
 }
