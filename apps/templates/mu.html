@@ -4,7 +4,8 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>Управление учётными записями </title>
 
-    <link rel="stylesheet" href="/static/css/bootstrap.css">
+    <!-- <link rel="stylesheet" href="/static/css/bootstrap.css"> -->
+    <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css">
     <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
     <link rel="shortcut icon" href="http://twitter.github.com/bootstrap/assets/ico/favicon.ico">
 
@@ -46,28 +47,27 @@
               <div class="modal-body">
                 <form class="form-horizontal">
                   <div class="control-group">
+                    <label class="control-label" for="input_login">Login</label>
+                    <div class="controls">
+                      <input type="text" id="input_login" value={{ login }} {{#if new_user}}sfsdf{{/if}}disabled>
+                    </div>
+                  </div>
+                  <div class="control-group">
                     <label class="control-label" for="input_iname">Имя</label>
                     <div class="controls">
-                      <input type="text" id="input_iname" placeholder="Имя" value={{iname}}>
+                      <input type="text" id="input_iname" value={{iname}}>
                     </div>
                   </div>
                   <div class="control-group">
                     <label class="control-label" for="input_fname">Фамилия</label>
                     <div class="controls">
-                      <input type="text" id="input_fname" placeholder="Фамилия" value={{fname}}>
+                      <input type="text" id="input_fname" value={{fname}}>
                     </div>
                   </div>
                   <div class="control-group">
                     <label class="control-label" for="input_bdate">Дата рождения</label>
                     <div class="controls">
-                      <input type="text" id="input_bdate" placeholder="Дата рождения" value={{birth_date}}>
-                    </div>
-                  </div>
-                  <div class="control-group">
-                    <div class="controls">
-                      <label class="checkbox">
-                        <input type="checkbox" {{#if signed_eula}} checked {{/if}}> EULA
-                      </label>
+                      <input type="text" id="input_bdate" placeholder="дд.мм.гггг" value={{birth_date}}>
                     </div>
                   </div>
                 </form>
@@ -88,19 +88,9 @@
                 $('#info_alert').show();
             }
             
-            
             // Подготовка данных об актуальности списка пользователей
             var server_start_time = {{server_start_time}},
                 last_sync = localStorage.getItem('yadmin_users_list_last_sync_time');
-            
-            // $('#filter_str').on('keydown', function(){
-            //     filter_users();  
-            // })
-
-            $("#btn_filter_users").on('click', function(e){
-                filter_users();
-                e.preventDefault();
-            });
             
             // Проверяем актуальность списка пользователей
             if (last_sync != server_start_time) {
@@ -139,7 +129,31 @@
                 localStorage.setItem('do_not_show_info_alert', 1);
             })
 
+            $('#filter_str').on('keydown', function(event){
+                if (event.keyCode==13){
+                    event.preventDefault();
+                    filter_users();
+                } else if (event.keyCode==27) {
+                    $('#filter_str').val('');
+                    filter_users();
+                }
+            })
+
+            $("#btn_filter_users").on('click', function(e){
+                filter_users();
+                e.preventDefault();
+            });
+
+            $("#btn_add_user").on('click', add_user);
+
         }) // document.ready
+
+        function add_user(){
+            var login = $('#filter_str').val(),
+                view_user_modal = Handlebars.compile($('#view_user_tmpl').html());
+                $(view_user_modal({login: login, new_user: 1})).modal();
+
+        }
         
         function view_user(login){
             view_user_modal = Handlebars.compile($('#view_user_tmpl').html())
@@ -204,8 +218,8 @@
 
 <body>
     <div class='container'>
-        <div class="navbar">
-            <div class="navbar-inner">
+        <!-- <div class="navbar">
+            <div class="navbar-inner"> -->
                 <div class='btn-toolbar'>
                     {% for i in domains %}
                         <div class="btn-group">
@@ -220,20 +234,30 @@
                         </div>
                     {% endfor %}
                 </div>
-            </div>
-        </div>
+            <!-- </div>
+        </div> -->
         
         <div id="divError"></div>
         <div id="divMessage"></div>
         <div id="divDebug"></div>
 
         <!-- <div class="tab-content"> -->
-        <form class="form-search">
+        <!-- <form class="form-search">
           <div class="input-append">
             <input type="text" placeholder="Имя" id="filter_str" class="search-query" autocomplete="off">
             <button id="btn_filter_users" class="btn">Отбор</button>
           </div>
-        </form>
+          <button class="btn btn-primary" type="button"><i class="icon-plus icon-white"></i> Добавить</button>
+        </form> -->
+
+        <div class="input-append">
+          <input type="text" placeholder="Имя" id="filter_str" autocomplete="off">
+          <button id="btn_filter_users" class="btn">Отбор</button>
+          <button id="btn_add_user" class="btn" type="button"><i class="icon-plus"></i> Добавить</button>
+        </div>
+
+
+
         <div class="alert alert-info" style="display: none;" id="info_alert">
             <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
             Двойной клик на пользователе для редактирования
@@ -244,9 +268,9 @@
         </div>
         
         <!-- </div> -->
-        <div class="container-fluid">
+        <!-- <div class="container-fluid">
             <span class='span4 offset4'id="dp_nav"></span>
-        </div>
+        </div> -->
     </div>
     
 </body>
