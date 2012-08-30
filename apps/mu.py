@@ -82,7 +82,15 @@ def get_user_info(mycgi, environ):
     print(res)
     print(type(res))
     res['signed_eula'] = 1 if res['signed_eula'] == '1' else ''
+    res['sex'] = None if res['sex']=='2' else 1
     return {'items': res, 'success': 1}
+
+
+@decorators.dumpencode
+def save_user_info(mycgi, environ):
+    pass
+    #    def editUserDetails(self, login, new_password = None, first_name = None, last_name = None, sex = None):
+
 
 
 

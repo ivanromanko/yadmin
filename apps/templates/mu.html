@@ -4,8 +4,8 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>Управление учётными записями </title>
 
-    <!-- <link rel="stylesheet" href="/static/css/bootstrap.css"> -->
-    <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css">
+    <link rel="stylesheet" href="/static/css/bootstrap.css">
+    <!-- <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css"> -->
     <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
     <link rel="shortcut icon" href="http://twitter.github.com/bootstrap/assets/ico/favicon.ico">
 
@@ -13,7 +13,6 @@
     <script src="/static/js/bootstrap.js"></script>
     <script src="/static/js/handlebars-1.0.0.beta.6.js"></script>
     <script src="/static/js/otclass.js"></script>
-    <script src="/static/js/umb-navigation_new.js"></script>
     <script src="/static/js/otmes.js"></script>
     
     <script id="users_tmpl" type="text/x-handlebars-template">
@@ -39,46 +38,103 @@
 
     <script id="view_user_tmpl" type="text/x-handlebars-template">
         {% raw %}
-            <div class="modal hide fade">
+            <div id="div_user_info" class="modal hide fade">
               <div class="modal-header">
                 <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
                 <h3>{{ login }}</h3>
               </div>
               <div class="modal-body">
-                <form class="form-horizontal">
-                  <div class="control-group">
-                    <label class="control-label" for="input_login">Login</label>
-                    <div class="controls">
-                      <input type="text" id="input_login" value={{ login }} {{#if new_user}}sfsdf{{/if}}disabled>
+              <div class="accordion" id="accordion2">
+                <div class="accordion-group">
+                  <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseOne">
+                      Основное
+                    </a>
+                  </div>
+                  <div id="collapseOne" class="accordion-body in collapse" style="height: auto; ">
+                    <div class="accordion-inner">
+                      <form class="form-horizontal">
+                        <div class="control-group">
+                          <label class="control-label" for="user_info_input_login">Login</label>
+                          <div class="controls">
+                            <input type="text" id="user_info_input_login" value="{{ login }}" {{#if new_user}}sfsdf{{/if}}disabled>
+                          </div>
+                        </div>
+                        <div class="control-group">
+                          <label class="control-label" for="user_info_input_password">Password</label>
+                          <div class="controls">
+                            <input type="text" id="user_info_input_password">
+                          </div>
+                        </div>
+                      </form>
                     </div>
                   </div>
-                  <div class="control-group">
-                    <label class="control-label" for="input_iname">Имя</label>
-                    <div class="controls">
-                      <input type="text" id="input_iname" value={{iname}}>
+                </div>
+                <div class="accordion-group">
+                  <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseTwo">
+                      Дополнительное
+                    </a>
+                  </div>
+                  <div id="collapseTwo" class="accordion-body collapse" style="height: 0px; ">
+                    <div class="accordion-inner">
+                      <form class="form-horizontal">
+                        <div class="control-group">
+                          <label class="control-label" for="user_info_input_iname">Имя</label>
+                          <div class="controls">
+                            <input type="text" id="user_info_input_iname" value="{{iname}}">
+                          </div>
+                        </div>
+                        <div class="control-group">
+                          <label class="control-label" for="user_info_input_fname">Фамилия</label>
+                          <div class="controls">
+                            <input type="text" id="user_info_input_fname" value="{{fname}}">
+                          </div>
+                        </div>
+                        <div class="control-group">
+                          <label class="control-label" for="user_info_input_bdate">Дата рождения</label>
+                          <div class="controls">
+                            <input type="text" id="user_info_input_bdate" placeholder="дд.мм.гггг" value="{{birth_date}}" disabled>
+                          </div>
+                        </div>
+                        <div class="control-group">
+                          <label class="control-label" for="user_info_hintq">Секретный вопрос</label>
+                          <div class="controls">
+                            <input type="text" id="user_info_hintq" value="{{hintq}}">
+                          </div>
+                        </div>
+                        <div class="control-group">
+                          <label class="control-label" for="user_info_hinta">Секретный вопрос</label>
+                          <div class="controls">
+                            <input type="text" id="user_info_hinta" value="{{hinta}}">
+                          </div>
+                        </div>
+                        <div class="control-group">
+                          <label class="control-label" for="user_info_sex_1">Пол</label>
+                          <div class="controls">
+                            <label class="radio inline">
+                              <input type="radio" name="optionsRadios" id="user_info_sex_1" value="1" {{#if sex}}checked{{/if}}>
+                              М
+                            </label>
+                            <label class="radio inline">
+                              <input type="radio" name="optionsRadios" id="user_info_sex_2" value="2" {{#if sex}} {{else}}checked{{/if}}>
+                              Ж
+                            </label>
+                          </div>
+                        </div>
+                      </form>
                     </div>
                   </div>
-                  <div class="control-group">
-                    <label class="control-label" for="input_fname">Фамилия</label>
-                    <div class="controls">
-                      <input type="text" id="input_fname" value={{fname}}>
-                    </div>
-                  </div>
-                  <div class="control-group">
-                    <label class="control-label" for="input_bdate">Дата рождения</label>
-                    <div class="controls">
-                      <input type="text" id="input_bdate" placeholder="дд.мм.гггг" value={{birth_date}}>
-                    </div>
-                  </div>
-                </form>
+                </div>
               </div>
               <div class="modal-footer">
-                <a href="#" class="btn" data-dismiss="modal">Отмена</a>
-                <a href="#" class="btn btn-primary">Сохранить</a>
+                <button class="btn" data-dismiss="modal">Отмена</button>
+                <button id="btn_save_user" class="btn btn-primary">Сохранить</button>
               </div>
             </div>
         {% endraw %}
     </script>
+
 
     <script type="text/javascript">
         $(document).ready(function(){
@@ -146,17 +202,33 @@
 
             $("#btn_add_user").on('click', add_user);
 
+            $(document).on('click', "#btn_save_user", save_user);
+
+
+
         }) // document.ready
+        
+        function save_user(){
+            var param = {login: $('#user_info_input_login').val(),
+                         iname: $('#user_info_input_iname').val(),
+                         fname: $('#user_info_input_fname').val()}
+            console.log(param);
+        }
 
         function add_user(){
+            if ($("#div_user_info").length){
+                $("#div_user_info").remove()
+            } 
             var login = $('#filter_str').val(),
                 view_user_modal = Handlebars.compile($('#view_user_tmpl').html());
-                $(view_user_modal({login: login, new_user: 1})).modal();
-
+            $(view_user_modal({login: login, new_user: 1})).modal();
         }
         
         function view_user(login){
-            view_user_modal = Handlebars.compile($('#view_user_tmpl').html())
+            if ($("#div_user_info").length){
+                $("#div_user_info").remove();
+            }
+            var view_user_modal = Handlebars.compile($('#view_user_tmpl').html());
             $.getJSON('/mu', {do_what: 'get_user_info', login: login, domain: localStorage.getItem('current_domain')}).done(function(data){
                 if (data.success){
                     console.log(data.items);
