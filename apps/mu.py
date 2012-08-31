@@ -81,8 +81,9 @@ def get_user_info(mycgi, environ):
     res = api[mycgi['domain']].getUserInfo(mycgi['login'])
     print(res)
     print(type(res))
-    res['signed_eula'] = 1 if res['signed_eula'] == '1' else ''
-    res['sex'] = None if res['sex']=='2' else 1
+    res['signed_eula'] = 1 if res['signed_eula'] == '1' else None
+    res['sex_male'] = 1 if res['sex']=='1' else None
+    res['sex_female'] = 1 if res['sex']=='2' else None
     return {'items': res, 'success': 1}
 
 
