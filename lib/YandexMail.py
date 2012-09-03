@@ -56,10 +56,17 @@ class Base(object):
         self._logger.debug(message, *args, **kwargs)
 
 
-class ActionException(BaseException):
+class ActionException(Exception):
     def __init__(self, message, url, params):
+        self.message = message
         message += ' Request: [url %s] [params %s]' % (url, params)
         super(ActionException, self).__init__(message)
+    
+    def __str__(self):
+        return self.message
+
+    def __repr__(self):
+        return repr(self.message)
 
 class UserApi(Base):
 
@@ -84,9 +91,7 @@ class UserApi(Base):
       @return ElementTree.Element
     '''
     def createUser(self, login, password):
-        return self.invokeHandler('reg_user_token',
-            {'u_login' : login, 'u_password' : password}
-        )
+        return self.invokeHandler('reg_user_token', {'u_login' : login, 'u_password' : password})
 
     '''
       @param string login
@@ -106,14 +111,14 @@ class UserApi(Base):
       @param string sex [1 man, 2 woman]
       @return ElementTree.Element
     '''
-    def editUserDetails(self, login, new_password = None, first_name = None, last_name = None, sex = None):
+    def editUserDetails(self, login, password=None, iname=None, fname=None, sex=None):
         return self.invokeHandler('edit_user',
             {
-                'login' : login,
-                'password' : new_password,
-                'iname' : first_name,
-                'fname' : last_name,
-                'sex' : sex
+                'login': login,
+                'password': password,
+                'iname': iname,
+                'fname': fname,
+                'sex': sex
             }
         )
 
@@ -251,7 +256,8 @@ class UserApi(Base):
     @return ElementTree.Element
     '''
     def checkUser(self, login):
-        return self.invokeHandler('check_user', {'login' : login})
+        xml = self.invokeHandler('check_user', {'login' : login})
+        return 1 if xml.findtext('result')=='exists' else 0
 
     '''
     @param string domain
