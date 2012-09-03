@@ -4,8 +4,8 @@
     <meta http-equiv="content-type" content="text/html; charset=UTF-8">
     <title>Управление учётными записями </title>
 
-    <link rel="stylesheet" href="/static/css/bootstrap.css">
-    <!-- <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css"> -->
+    <!-- <link rel="stylesheet" href="/static/css/bootstrap.css"> -->
+    <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css">
     <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
     <link rel="shortcut icon" href="http://twitter.github.com/bootstrap/assets/ico/favicon.ico">
 
@@ -98,26 +98,26 @@
                           </div>
                         </div>
                         <div class="control-group">
-                          <label class="control-label" for="user_info_hintq">Секретный вопрос</label>
+                          <label class="control-label" for="user_info_input_hintq">Секретный вопрос</label>
                           <div class="controls">
-                            <input type="text" id="user_info_hintq" value="{{hintq}}">
+                            <input type="text" id="user_info_hintq" value="{{hintq}}" disabled>
                           </div>
                         </div>
                         <div class="control-group">
-                          <label class="control-label" for="user_info_hinta">Секретный вопрос</label>
+                          <label class="control-label" for="user_info_input_hinta">Секретный ответ</label>
                           <div class="controls">
-                            <input type="text" id="user_info_hinta" value="{{hinta}}">
+                            <input type="text" id="user_info_hinta" value="{{hinta}}" disabled>
                           </div>
                         </div>
                         <div class="control-group">
                           <label class="control-label" for="user_info_sex_1">Пол</label>
                           <div class="controls">
                             <label class="radio inline">
-                              <input type="radio" name="optionsRadios" id="user_info_sex_1" value="1" {{#if sex_male}}checked{{/if}}>
+                              <input type="radio" id="user_info_sex_1" name="radio_sex" value="1" {{#if sex_male}}checked{{/if}}>
                               М
                             </label>
                             <label class="radio inline">
-                              <input type="radio" name="optionsRadios" id="user_info_sex_2" value="2" {{#if sex_female}}checked{{/if}}>
+                              <input type="radio" id="user_info_sex_2" name="radio_sex" value="2" {{#if sex_female}}checked{{/if}}>
                               Ж
                             </label>
                           </div>
@@ -133,8 +133,17 @@
                   </div>
                 </div>
               </div>
+              <div id="div_modal_error" class="alert alert-error" style="display: none;">
+                <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
+              </div>
+              <div id="div_modal_message" class="alert alert-info" style="display: none;">
+                <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
+              </div>
+              <div id="div_modal_debug" class="alert alert-info" style="display: none;">
+                <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
+              </div>
               <div class="modal-footer">
-                <button class="btn" data-dismiss="modal">Отмена</button>
+                <button id="btn_cancel_changes" class="btn" data-dismiss="modal">Отмена</button>
                 <button id="btn_save_user" class="btn btn-primary">Сохранить</button>
               </div>
             </div>
@@ -146,6 +155,7 @@
         $(document).ready(function(){
             // Настройка вывода ошибок и информации
             m = new otmes ('', {});
+            m_modal = new otmes ('', {errorDiv: 'div_modal_error', messagesDiv: 'div_modal_message', debugDiv: 'div_modal_debug'});
             if (!localStorage.getItem('do_not_show_info_alert')) {
                 $('#info_alert').show();
             }
@@ -215,10 +225,40 @@
         }) // document.ready
         
         function save_user(){
-            var param = {login: $('#user_info_input_login').val(),
-                         iname: $('#user_info_input_iname').val(),
-                         fname: $('#user_info_input_fname').val()}
-            console.log(param);
+            var param = {};
+            $.each(['login', 'password', 'iname', 'fname'], function(){
+                param[this] = $('#user_info_input_'+this).val() || "";
+            })
+            if ($('#user_info_sex_1').is(':checked')){
+                param['sex'] = 1;
+            }
+            else if ($('#user_info_sex_2').is(':checked')){
+                param['sex'] = 2;
+            } else{
+                param['sex'] = '';
+            }
+            $.getJSON('/mu', {do_what: 'save_user_info', param: JSON.stringify(param), domain: localStorage.getItem('current_domain')}).done(function(data){
+                if (data.success){
+                    $("#btn_save_user").addClass('btn-success');
+                    setTimeout(function () {
+                        $("#btn_save_user").removeClass('btn-success');
+                    }, 3000);
+                    $('#div_modal_error').hide();
+                    $("#btn_cancel_changes").html('Закрыть');
+                    refresh_users_list().done(function(){
+                        draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+localStorage.getItem('current_domain')))));
+                    });
+                } else {
+                    $("#btn_save_user").toggleClass('btn-danger');
+                    setTimeout(function () {
+                        $("#btn_save_user").removeClass('btn-danger');
+                    }, 3000);
+                    m_modal.e(data.msg);
+                    m_modal.e(data.err);
+                    $('#div_modal_error').show();
+
+                }
+            })
         }
 
         function add_user(){

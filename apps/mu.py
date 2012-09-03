@@ -13,7 +13,7 @@ import json
 # from logging import handlers
 
 from lib import util
-
+from lib.YandexMail import ActionException
 from lib import decorators
 from config.settings import settings
 
@@ -33,7 +33,8 @@ def main(environ, start_response):
                  'list': {'exec': make_head},
                  'list_users_ajax': {'exec': list_users_ajax},
                  'refresh_users_list': {'exec': refresh_users_list},
-                 'get_user_info': {'exec': get_user_info}
+                 'get_user_info': {'exec': get_user_info},
+                 'save_user_info': {'exec': save_user_info}
                  }
     if do_what not in functions:
         return ['<br><br><br><div align="center"><p>Произошло страшное</p></div>'.encode('utf-8')]
@@ -89,8 +90,40 @@ def get_user_info(mycgi, environ):
 
 @decorators.dumpencode
 def save_user_info(mycgi, environ):
-    pass
-    #    def editUserDetails(self, login, new_password = None, first_name = None, last_name = None, sex = None):
+    '''
+    Сохраняет информацию о пользователе. Перед сохранением проверяет, есть ли такой пользователь в домене.
+    Если нет, что считает, что производится добавление нового пользователя. Сначала заводит пользователя
+    с предоставленными логином и паролем, а потом заполняет остальную информацию, если она передана.
+    '''
+    def save_user_details(param):
+        """
+        Маленькая функция для сохранения неосновной информации о пользователе
+        """
+        if any([param[i] for i in param.keys() if i!='login']):
+            try:
+                api[mycgi['domain']].editUserDetails(**param)
+            except ActionException as err:
+                return {'success': 0, 'err': str(err), 'msg': 'При сохранении информации о пользователе произошла ошибка'}
+            else:
+                return {'success': 1}
+
+    param = json.loads(mycgi['param'])
+    for i in param:
+        if not param[i]:
+            param[i] = None
+
+    if not api[mycgi['domain']].checkUser(param['login']):
+        if not param['password']:
+            return {'success': 0, 'err': '', 'msg': 'Пароль для нового пользователя не может быть пустым'}
+        try:
+            api[mycgi['domain']].createUser(param['login'], param['password'])
+        except ActionException as err:
+            return {'success': 0, 'err': str(err), 'msg': 'При создании пользователя произошла ошибка'}
+        else:
+            return save_user_details(param)
+    else:
+        return save_user_details(param)
+            
 
 
 
