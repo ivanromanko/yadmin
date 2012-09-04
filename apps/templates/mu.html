@@ -9,18 +9,43 @@
     <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
     <link rel="shortcut icon" href="http://twitter.github.com/bootstrap/assets/ico/favicon.ico">
 
-    <script src="/static/js/jquery.min.js"></script>
-    <script src="/static/js/bootstrap.js"></script>
     <script src="/static/js/handlebars-1.0.0.beta.6.js"></script>
     <script src="/static/js/otclass.js"></script>
     <script src="/static/js/otmes.js"></script>
-    
+    <script src="/static/js/jquery.min.js"></script>
+    <script src="/static/js/bootstrap.js"></script>
+
     <script id="users_tmpl" type="text/x-handlebars-template">
         {% raw %}
             <table id="table_users_list" class="table table-condensed">
                 <thead>
                     <tr>
-                        <th>Имя</th>
+                        <th>Люди</th>
+                        <th>Отметить как группу</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each items}}
+                        <tr>
+                            <td class='no_select_on_dbl_click' data-name="{{this}}">
+                                {{this}}
+                            </td>
+                            <td>
+                                <a class="mark_as_group" href="#" data-name="{{this}}"><i class='icon-arrow-right'></i></a>
+                            </td>
+                        </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+        {% endraw %}
+    </script>
+
+    <script id="groups_tmpl" type="text/x-handlebars-template">
+        {% raw %}
+            <table id="table_groups_list" class="table table-condensed">
+                <thead>
+                    <tr>
+                        <th>Группы</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -36,6 +61,32 @@
         {% endraw %}
     </script>
 
+    <script id="tmpl_forwards_list" type="text/x-handlebars-template">
+        {% raw %}
+          <table id="table_forwards_list" class="table table-condensed">
+            <thead>
+              <tr>
+                <th>Кому</th>
+                <th>Удалить</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each items}}
+                <tr>
+                  <td class='no_select_on_dbl_click'>
+                    {{this.filter_param}}
+                  </td>
+                  <td>
+                    <input type="checkbox" class="remove_recipient" data-id="{{this.id}}">
+                  </td>
+                </tr>
+              {{/each}}
+            </tbody>
+          </table>
+        {% endraw %}
+    </script>
+
+
     <script id="view_user_tmpl" type="text/x-handlebars-template">
         {% raw %}
             <div id="div_user_info" class="modal hide fade">
@@ -44,14 +95,14 @@
                 <h3>{{ login }}</h3>
               </div>
               <div class="modal-body">
-              <div class="accordion" id="accordion2">
+              <div class="accordion" id="accordion1">
                 <div class="accordion-group">
                   <div class="accordion-heading">
-                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseOne">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseOne">
                       Основное
                     </a>
                   </div>
-                  <div id="collapseOne" class="accordion-body in collapse" style="height: auto; ">
+                  <div id="collapseOne" class="accordion-body collapse {{#if is_group}} {{else}} in {{/if}}" style="height: {{#if is_group}} 0px {{else}} auto {{/if}}; ">
                     <div class="accordion-inner">
                       <form class="form-horizontal">
                         <div class="control-group">
@@ -72,7 +123,7 @@
                 </div>
                 <div class="accordion-group">
                   <div class="accordion-heading">
-                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion2" href="#collapseTwo">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseTwo">
                       Дополнительное
                     </a>
                   </div>
@@ -129,6 +180,23 @@
                           </div>
                         </div>
                       </form>
+                    </div>
+                  </div>
+                </div>
+                <div class="accordion-group">
+                  <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseThree">
+                      Пересылка почты
+                    </a>
+                  </div>
+                  <div id="collapseThree" class="accordion-body collapse {{#if is_group}} in {{else}} {{/if}}" style="height: {{#if is_group}} auto {{else}} 0px {{/if}};">
+                    <div class="accordion-inner">
+                      <div id="div_add_forward" class="input-append">
+                         <input type="text" id="input_add_forward" data-from="{{login}}" placeholder="Email">
+                         <button id="btn_add_forward" class="btn btn-primary" data-from="{{login}}"><i class="icon-plus"></i> Добавить</button>
+                      </div>
+                      <div id="modal_forwards_list">
+                      </div>  
                     </div>
                   </div>
                 </div>
@@ -192,14 +260,24 @@
                 $(this).addClass('btn-primary').next().addClass('btn-primary');
                 // console.log($(this), 'was clicked');
                 localStorage.setItem('current_domain', $(this).data('domain'));
-                draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain')))));
+                draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain'))), 'users_tmpl', 'users_table');
+                draw_users(JSON.parse(localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))), 'groups_tmpl', 'groups_table');
             })
             $(document).on('dblclick', '#table_users_list td', function(){
                 view_user($(this).data('name'));
             })
+            $(document).on('dblclick', '#table_groups_list td', function(){
+                view_user($(this).data('name'), group=1);
+            })
             $(document).on('click', '#close_info_alert', function(){
                 localStorage.setItem('do_not_show_info_alert', 1);
             })
+
+            $(document).on('click', 'a.mark_as_group', function(e){
+              e.preventDefault();
+              console.log($(this).data('name'));
+              mark_as_group($(this).data('name')); 
+            });
 
             $('#filter_str').on('keydown', function(event){
                 if (event.keyCode==13){
@@ -211,6 +289,16 @@
                 }
             })
 
+            $(document).on('keydown', '#input_add_forward', function(event){
+                if (event.keyCode==13){
+                    event.preventDefault();
+                    add_forward($(this).data('from'), $("#input_add_forward").val());
+                }
+            })
+            $(document).on('click', '#btn_add_forward', function(){
+                add_forward($(this).data('from'), $("#input_add_forward").val());
+            })
+
             $("#btn_filter_users").on('click', function(e){
                 filter_users();
                 e.preventDefault();
@@ -220,12 +308,32 @@
 
             $(document).on('click', "#btn_save_user", save_user);
 
-
-
         }) // document.ready
+
+        function add_forward(from, to){
+          $.getJSON('/mu', {do_what: 'add_forward', domain: localStorage.getItem('current_domain'), from: from, to: to}).done(function(data){
+            if (data.success){
+                $("#btn_add_forward").addClass('btn-success');
+                setTimeout(function () {
+                    $("#btn_add_forward").removeClass('btn-success');
+                }, 3000);
+                $('#div_modal_error').hide();
+                // var tmpl_redir = Handlebars.compile($('#forward_tmpl').html());
+                get_forwards_list();
+            } else {
+                $("#btn_add_forward").toggleClass('btn-danger');
+                setTimeout(function () {
+                    $("#btn_add_forward").removeClass('btn-danger');
+                }, 3000);
+                m_modal.e(data.msg);
+                m_modal.e(data.err);
+                $('#div_modal_error').show();
+            }
+          })
+        }
         
         function save_user(){
-            var param = {};
+            var param = {forwards_to_remove: []};
             $.each(['login', 'password', 'iname', 'fname'], function(){
                 param[this] = $('#user_info_input_'+this).val() || "";
             })
@@ -237,6 +345,16 @@
             } else{
                 param['sex'] = '';
             }
+            var forwards_to_remove = [];
+            $.each($("input.remove_recipient"), function(){
+              if ($(this).is(':checked')){
+                forwards_to_remove.push($(this).data('id'));
+              }
+            })
+
+            if (forwards_to_remove.length){
+              remove_forwards(param.login, forwards_to_remove);
+            }
             $.getJSON('/mu', {do_what: 'save_user_info', param: JSON.stringify(param), domain: localStorage.getItem('current_domain')}).done(function(data){
                 if (data.success){
                     $("#btn_save_user").addClass('btn-success');
@@ -246,7 +364,7 @@
                     $('#div_modal_error').hide();
                     $("#btn_cancel_changes").html('Закрыть');
                     refresh_users_list().done(function(){
-                        draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+localStorage.getItem('current_domain')))));
+                        draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+localStorage.getItem('current_domain'))), 'users_tmpl', 'users_table');
                     });
                 } else {
                     $("#btn_save_user").toggleClass('btn-danger');
@@ -256,21 +374,51 @@
                     m_modal.e(data.msg);
                     m_modal.e(data.err);
                     $('#div_modal_error').show();
-
                 }
             })
         }
 
+        function remove_forwards(login, forwards_to_remove){
+          $.getJSON('/mu', {do_what: 'remove_forwards', domain: localStorage.getItem('current_domain'),
+            login: login, forwards_to_remove: JSON.stringify(forwards_to_remove)}).done(function(data){
+            if (data.success){
+                $("#btn_add_forward").addClass('btn-success');
+                setTimeout(function () {
+                    $("#btn_add_forward").removeClass('btn-success');
+                }, 3000);
+                // $('#div_modal_error').hide();
+                // $("#btn_cancel_changes").html('Закрыть');
+                get_forwards_list(login);
+            } else {
+                $("#btn_add_forward").toggleClass('btn-danger');
+                setTimeout(function () {
+                    $("#btn_add_forward").removeClass('btn-danger');
+                }, 3000);
+                m_modal.e(data.msg);
+                m_modal.e(data.err);
+                $('#div_modal_error').show();
+            }
+          })
+        }
+        
         function add_user(){
             if ($("#div_user_info").length){
                 $("#div_user_info").remove()
             } 
             var login = $('#filter_str').val(),
                 view_user_modal = Handlebars.compile($('#view_user_tmpl').html());
-            $(view_user_modal({login: login, new_user: 1})).modal();
+            $(view_user_modal({login: login})).modal();
         }
         
-        function view_user(login){
+        function get_forwards_list(login){
+          return $.getJSON('/mu', {do_what: 'get_forwards_list', login: login, domain: localStorage.getItem('current_domain')}).done(function(data){
+            var tmpl_forwards_list = Handlebars.compile($("#tmpl_forwards_list").html());
+            console.log(data);
+            $('#modal_forwards_list').append(tmpl_forwards_list(data));
+          })
+        }
+
+        function view_user(login, if_group){
             if ($("#div_user_info").length){
                 $("#div_user_info").remove();
             }
@@ -278,7 +426,12 @@
             $.getJSON('/mu', {do_what: 'get_user_info', login: login, domain: localStorage.getItem('current_domain')}).done(function(data){
                 if (data.success){
                     console.log(data.items);
-                    $(view_user_modal(data.items)).modal();
+                    if (if_group){
+                        data.items['is_group'] = 1;    
+                    }
+                    $(view_user_modal(data.items)).modal().one('shown', function(){
+                        get_forwards_list(login);
+                      });                    
                 } else{
                     m.e(data.err);
                     m.m(data.msg);
@@ -290,26 +443,41 @@
             console.log('initial_draw');
             var first_button = $('div.btn-toolbar').find('div.btn-group').eq(0).find('button').eq(0);
             first_button.addClass('btn-primary').next().addClass('btn-primary');
-            draw_users(convert_users_to_list(JSON.parse(localStorage.getItem('yadmin_users_'+first_button.data('domain')))));
+            draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+first_button.data('domain'))), 'users_tmpl', 'users_table');
             localStorage.setItem('current_domain', first_button.data('domain'));
+            draw_users(JSON.parse(localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))), 'groups_tmpl', 'groups_table');
         }
 
-        function draw_users(users){
+        function draw_users(users, tmpl, target){
             // Обновляем таблицу
-            var users_template = Handlebars.compile($('#users_tmpl').html());
-            $("#users_table").empty().append(users_template({items: users}));
+            var users_template = Handlebars.compile($('#'+tmpl).html());
+            $("#"+target).empty().append(users_template({items: users}));
+        }
+
+        function mark_as_group(name){
+            // Отмечает пользователя в таблице как группу
+            var groups = JSON.parse(localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))),
+                new_member = name;
+            if (!groups){
+                groups = [];
+            }
+            if (groups.indexOf(new_member) == -1){
+                groups.push(new_member);    
+            }
+            groups.sort();
+            localStorage.setItem('yadmin_groups_'+localStorage.getItem('current_domain'), JSON.stringify(groups));
+            draw_users(JSON.parse(localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))), 'groups_tmpl', 'groups_table');
         }
 
         function filter_users(){
             var search_str = $("#filter_str").val(),
-                users = JSON.parse(localStorage.getItem('yadmin_users_'+localStorage.getItem('current_domain'))),
-                tmp = convert_users_to_list(users);
+                users = JSON.parse(localStorage.getItem('yadmin_users_'+localStorage.getItem('current_domain')));
+                // tmp = convert_users_to_list(users);
 
-            var res = $.grep(tmp, function(elem){
+            var res = $.grep(users, function(elem){
                 return elem.indexOf(search_str)+1;
             })
-            console.log(res);
-            draw_users(res);
+            draw_users(res, 'users_tmpl', 'users_table');
         }
 
         function convert_users_to_list(users){
@@ -324,7 +492,7 @@
             return $.getJSON('/mu', {do_what: 'refresh_users_list'}).done(function(data){
                 if (data.success){
                     $.each(data.items, function(key, val){
-                        localStorage.setItem('yadmin_users_'+key, JSON.stringify(val));    
+                        localStorage.setItem('yadmin_users_'+key, JSON.stringify(convert_users_to_list(val)));    
                     })
                     console.log('Список пользователей обновлён');
                     $(document).trigger('users_list_freshness_ok');
@@ -381,9 +549,15 @@
             Двойной клик на пользователе для редактирования
         </div>
         
-        <div id='users_table'>
-            
+        <div class='row'>
+            <div class="span6">
+                <div id='users_table'></div>
+            </div>
+            <div class="span6">
+                <div id='groups_table'></div>
+            </div>
         </div>
+        
         
         <!-- </div> -->
         <!-- <div class="container-fluid">
