@@ -9,10 +9,10 @@
     <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
     <link rel="shortcut icon" href="http://twitter.github.com/bootstrap/assets/ico/favicon.ico">
 
+    <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/handlebars-1.0.0.beta.6.js"></script>
     <script src="/static/js/otclass.js"></script>
     <script src="/static/js/otmes.js"></script>
-    <script src="/static/js/jquery.min.js"></script>
     <script src="/static/js/bootstrap.js"></script>
 
     <script id="users_tmpl" type="text/x-handlebars-template">
@@ -21,7 +21,7 @@
                 <thead>
                     <tr>
                         <th>Люди</th>
-                        <th>Отметить как группу</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -31,7 +31,7 @@
                                 {{this}}
                             </td>
                             <td>
-                                <a class="mark_as_group" href="#" data-name="{{this}}"><i class='icon-arrow-right'></i></a>
+                              <a class="mark_as_group" href="#" data-name="{{this}}" title="Отметить как группу"><i class='icon-arrow-right'></i></a>
                             </td>
                         </tr>
                     {{/each}}
@@ -46,13 +46,17 @@
                 <thead>
                     <tr>
                         <th>Группы</th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     {{#each items}}
                         <tr>
                             <td class='no_select_on_dbl_click' data-name={{this}}>
-                                {{this}}
+                              {{this}}
+                            </td>
+                            <td>
+                              <a class="unmark_as_group" href="#" data-name="{{this}}" title="Удалить признак группы"><i class='icon-remove'></i>
                             </td>
                         </tr>
                     {{/each}}
@@ -72,21 +76,49 @@
             </thead>
             <tbody>
               {{#each items}}
-                <tr>
-                  <td class='no_select_on_dbl_click'>
-                    {{this.filter_param}}
-                  </td>
-                  <td>
-                    <input type="checkbox" class="remove_recipient" data-id="{{this.id}}">
-                  </td>
-                </tr>
+                {{#if this.enabled}}
+                  <tr>
+                    <td class='no_select_on_dbl_click'>
+                      {{this.filter_param}}
+                    </td>
+                    <td>
+                      <input type="checkbox" class="remove_recipient" data-id="{{this.id}}">
+                    </td>
+                  </tr>
+                {{/if}}
               {{/each}}
             </tbody>
           </table>
         {% endraw %}
     </script>
 
-
+    <script id="tmpl_recieves_list" type="text/x-handlebars-template">
+        {% raw %}
+          <table id="table_forwards_list" class="table table-condensed">
+            <thead>
+              <tr>
+                <th>От кого</th>
+                <th>Удалить</th>
+              </tr>
+            </thead>
+            <tbody>
+              {{#each items}}
+                {{#if this.enabled}}
+                  <tr>
+                    <td class='no_select_on_dbl_click'>
+                      {{this.filter_param}}
+                    </td>
+                    <td>
+                      <input type="checkbox" class="remove_sender" data-from="{{this.filter_param}}" data-id="{{this.id}}">
+                    </td>
+                  </tr>
+                {{/if}}
+              {{/each}}
+            </tbody>
+          </table>
+        {% endraw %}
+    </script>
+    
     <script id="view_user_tmpl" type="text/x-handlebars-template">
         {% raw %}
             <div id="div_user_info" class="modal hide fade">
@@ -186,7 +218,7 @@
                 <div class="accordion-group">
                   <div class="accordion-heading">
                     <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseThree">
-                      Пересылка почты
+                      Отправляет в
                     </a>
                   </div>
                   <div id="collapseThree" class="accordion-body collapse {{#if is_group}} in {{else}} {{/if}}" style="height: {{#if is_group}} auto {{else}} 0px {{/if}};">
@@ -196,6 +228,19 @@
                          <button id="btn_add_forward" class="btn btn-primary" data-from="{{login}}"><i class="icon-plus"></i> Добавить</button>
                       </div>
                       <div id="modal_forwards_list">
+                      </div>  
+                    </div>
+                  </div>
+                </div>
+                <div class="accordion-group">
+                  <div class="accordion-heading">
+                    <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseFour" title="Из списка групп домена">
+                      Получает от
+                    </a>
+                  </div>
+                  <div id="collapseFour" class="accordion-body collapse" style="height: 0px;">
+                    <div class="accordion-inner">
+                      <div id="modal_recieves_list">
                       </div>  
                     </div>
                   </div>
@@ -278,6 +323,11 @@
               console.log($(this).data('name'));
               mark_as_group($(this).data('name')); 
             });
+            $(document).on('click', 'a.unmark_as_group', function(e){
+              e.preventDefault();
+              console.log($(this).data('name'));
+              unmark_as_group($(this).data('name'));
+            });
 
             $('#filter_str').on('keydown', function(event){
                 if (event.keyCode==13){
@@ -310,6 +360,20 @@
 
         }) // document.ready
 
+        function get_recieves_list(login){
+          var params = {do_what: 'get_recieves_list',
+                        login: login,
+                        domain: localStorage.getItem('current_domain'),
+                        groups: localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))};
+          return $.getJSON('/mu', params).done(function(data){
+            if (data.success){
+              var tmpl_recieves_list = Handlebars.compile($("#tmpl_recieves_list").html());
+              console.log(data);
+              $('#modal_recieves_list').append(tmpl_recieves_list(data));  
+            } else {m.e('Произошла ошибка')};
+          })
+        }  
+        
         function add_forward(from, to){
           $.getJSON('/mu', {do_what: 'add_forward', domain: localStorage.getItem('current_domain'), from: from, to: to}).done(function(data){
             if (data.success){
@@ -333,7 +397,7 @@
         }
         
         function save_user(){
-            var param = {forwards_to_remove: []};
+            var param = {};
             $.each(['login', 'password', 'iname', 'fname'], function(){
                 param[this] = $('#user_info_input_'+this).val() || "";
             })
@@ -348,12 +412,16 @@
             var forwards_to_remove = [];
             $.each($("input.remove_recipient"), function(){
               if ($(this).is(':checked')){
-                forwards_to_remove.push($(this).data('id'));
+                forwards_to_remove.push({from: param.login, id: $(this).data('id')});
               }
             })
-
+            $.each($("input.remove_sender"), function(){
+              if ($(this).is(':checked')){
+                forwards_to_remove.push({from: $(this).data('from'), id: $(this).data('id')});
+              }
+            })
             if (forwards_to_remove.length){
-              remove_forwards(param.login, forwards_to_remove);
+              remove_forwards(forwards_to_remove);
             }
             $.getJSON('/mu', {do_what: 'save_user_info', param: JSON.stringify(param), domain: localStorage.getItem('current_domain')}).done(function(data){
                 if (data.success){
@@ -431,6 +499,7 @@
                     }
                     $(view_user_modal(data.items)).modal().one('shown', function(){
                         get_forwards_list(login);
+                        get_recieves_list(login);
                       });                    
                 } else{
                     m.e(data.err);
@@ -465,6 +534,18 @@
                 groups.push(new_member);    
             }
             groups.sort();
+            localStorage.setItem('yadmin_groups_'+localStorage.getItem('current_domain'), JSON.stringify(groups));
+            draw_users(JSON.parse(localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))), 'groups_tmpl', 'groups_table');
+        }
+
+        function unmark_as_group(name){
+            // Отмечает пользователя в таблице как группу
+            var groups = JSON.parse(localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))),
+                del_member = name;
+            
+            if (groups.indexOf(del_member) != -1){
+                groups.pop(del_member);    
+            }
             localStorage.setItem('yadmin_groups_'+localStorage.getItem('current_domain'), JSON.stringify(groups));
             draw_users(JSON.parse(localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))), 'groups_tmpl', 'groups_table');
         }

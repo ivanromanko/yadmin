@@ -31,6 +31,7 @@ def main(environ, start_response):
                  'refresh_users_list': {'exec': refresh_users_list},
                  'get_user_info': {'exec': get_user_info},
                  'get_forwards_list': {'exec': get_forwards_list},
+                 'get_recieves_list': {'exec': get_recieves_list},
                  'add_forward': {'exec': add_forward},
                  'remove_forwards': {'exec': remove_forwards},
                  'save_user_info': {'exec': save_user_info}
@@ -89,6 +90,19 @@ def get_user_info(mycgi, environ):
 
 
 @decorators.dumpencode
+def get_recieves_list(mycgi, environ):
+    res = []
+    for i in json.loads(mycgi['groups']):
+        tmp = api[mycgi['domain']].getForwarding(i)
+        for j in tmp:
+            if '{}@{}'.format(mycgi['login'], mycgi['domain']) == j['filter_param']:
+                j['filter_param'] = i
+                res.append(j)
+
+    return {'items': res, 'success': 1}
+
+
+@decorators.dumpencode
 def get_forwards_list(mycgi, environ):
     res = api[mycgi['domain']].getForwarding(mycgi['login'])
     return {'items': res, 'success': 1}
@@ -108,7 +122,7 @@ def remove_forwards(mycgi, environ):
     err = []
     for i in json.loads(mycgi['forwards_to_remove']):
         try:
-            api[mycgi['domain']].stopForwarding(mycgi['login'], i)
+            api[mycgi['domain']].stopForwarding(i['from'], i['id'])
         except ActionException as error:
             err.append(str(error))
         if err:
