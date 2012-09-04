@@ -17,10 +17,6 @@ from lib.YandexMail import ActionException
 from lib import decorators
 from config.settings import settings
 
-
-# Set up api
-# for i in settings.DOMAINS:
-#     api = {i['name']: YandexMail.UserApi(i['token'], logging)
 api = settings.api
 
 def main(environ, start_response):
@@ -31,9 +27,13 @@ def main(environ, start_response):
     do_what = mycgi['do_what']
     functions = {
                  'list': {'exec': make_head},
-                 'list_users_ajax': {'exec': list_users_ajax},
+                 # 'list_users_ajax': {'exec': list_users_ajax},
                  'refresh_users_list': {'exec': refresh_users_list},
                  'get_user_info': {'exec': get_user_info},
+                 'get_forwards_list': {'exec': get_forwards_list},
+                 'get_recieves_list': {'exec': get_recieves_list},
+                 'add_forward': {'exec': add_forward},
+                 'remove_forwards': {'exec': remove_forwards},
                  'save_user_info': {'exec': save_user_info}
                  }
     if do_what not in functions:
@@ -49,43 +49,85 @@ def make_head(mycgi, environ):
     return [result.encode('utf-8')]
 
 
-@decorators.dumpencode
-def list_users_ajax(mycgi, environ):
-    startRec = mycgi.get('startRec')
-    delta = mycgi.get('delta')
-    # firstChars = mycgi.get()
-    print(startRec, delta)
-    try:
-        # users = api.getUsersList(page=startRec/delta+1, perpage=delta)
-        users = api.get_users_list(page=startRec, perpage=delta)
-    except Exception as err:
-        return {'success': 0, 'debug': err, 'msg': 'Произошла ошибка получения списка email-адресов домена'}
+# @decorators.dumpencode
+# def list_users_ajax(mycgi, environ):
+#     startRec = mycgi.get('startRec')
+#     delta = mycgi.get('delta')
+#     # firstChars = mycgi.get()
+#     print(startRec, delta)
+#     try:
+#         # users = api.getUsersList(page=startRec/delta+1, perpage=delta)
+#         users = api.get_users_list(page=startRec, perpage=delta)
+#     except Exception as err:
+#         return {'success': 0, 'debug': err, 'msg': 'Произошла ошибка получения списка email-адресов домена'}
 
-    return {'items': users, 'success': 1}
+#     return {'items': users, 'success': 1}
 
 
 @decorators.dumpencode
 def refresh_users_list(mycgi, environ):
-    # domain = mycgi['domain']
     users = {}
     for i in api:
         users[i] = []
-        users[i] += api[i].getUsersList(page=0, perpage=100)
-        users[i] += api[i].getUsersList(page=100, perpage=100)
+        number_of_users = int(api[i].getUsersNumber())
+        page=0
+        while number_of_users > 0:
+            users[i] += api[i].getUsersList(page=page, perpage=100)
+            number_of_users -= 100
+            page += 100
         users[i] = sorted(users[i], key=lambda x: x['name'])
-        print('users from ', i, users[i])
     return {'items': users, 'success': 1}
 
 
 @decorators.dumpencode
 def get_user_info(mycgi, environ):
     res = api[mycgi['domain']].getUserInfo(mycgi['login'])
-    print(res)
-    print(type(res))
     res['signed_eula'] = 1 if res['signed_eula'] == '1' else None
     res['sex_male'] = 1 if res['sex']=='1' else None
     res['sex_female'] = 1 if res['sex']=='2' else None
+    # res['redirects'] = api[mycgi['domain']].getForwarding(mycgi['login'])
     return {'items': res, 'success': 1}
+
+
+@decorators.dumpencode
+def get_recieves_list(mycgi, environ):
+    res = []
+    for i in json.loads(mycgi['groups']):
+        tmp = api[mycgi['domain']].getForwarding(i)
+        for j in tmp:
+            if '{}@{}'.format(mycgi['login'], mycgi['domain']) == j['filter_param']:
+                j['filter_param'] = i
+                res.append(j)
+
+    return {'items': res, 'success': 1}
+
+
+@decorators.dumpencode
+def get_forwards_list(mycgi, environ):
+    res = api[mycgi['domain']].getForwarding(mycgi['login'])
+    return {'items': res, 'success': 1}
+
+
+@decorators.dumpencode
+def add_forward(mycgi, environ):
+    try:
+        api[mycgi['domain']].setForwarding(mycgi['from'], mycgi['to'], "no")
+    except ActionException as err:
+        return {'success': 0, 'err': str(err), 'msg': 'При создании переадресации произошла ошибка'}
+    return {'success': 1}
+
+
+@decorators.dumpencode
+def remove_forwards(mycgi, environ):
+    err = []
+    for i in json.loads(mycgi['forwards_to_remove']):
+        try:
+            api[mycgi['domain']].stopForwarding(i['from'], i['id'])
+        except ActionException as error:
+            err.append(str(error))
+        if err:
+            return {'success': 0, 'err': str(err), 'msg': 'При удалении переадресаций произошла(и) ошибка(и)'}
+    return {'success': 1}
 
 
 @decorators.dumpencode
@@ -106,6 +148,9 @@ def save_user_info(mycgi, environ):
                 return {'success': 0, 'err': str(err), 'msg': 'При сохранении информации о пользователе произошла ошибка'}
             else:
                 return {'success': 1}
+        else:
+            return {'success': 1}
+
 
     param = json.loads(mycgi['param'])
     for i in param:

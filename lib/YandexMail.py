@@ -215,6 +215,12 @@ class UserApi(Base):
 
         return ret
 
+    def getUsersNumber(self, page = 1, perpage = 1):
+        xml = self.invokeHandler('get_domain_users', {'page' : page, 'on_page' : perpage})
+        number = xml.findtext('.//total')
+        
+        return number
+
     '''
      @param string login
      @return ElementTree.Element
