@@ -17,9 +17,6 @@ def tryex(foo):
             return foo(*args, **kwargs)
         except Exception as err:
             return {'success': 0, 'error': '{} Произошла ошибка'.format(time.strftime('%d.%m.%y %H:%M:%S')), 'debug': err}
-
-    # wrapper.__name__ = foo.__name__
-    # wrapper.__doc__ = foo.__doc__
     return wrapper
 
 def dumpencode(foo):

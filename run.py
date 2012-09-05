@@ -14,6 +14,7 @@ import time
 
 umb_modules = {'mu': {'name': 'mu', 'mtime': ''},
                'md': {'name': 'md', 'mtime': ''},
+               'bricks': {'name': 'bricks', 'mtime': ''},
                'static': {'name': 'static', 'mtime': ''}
                }
 

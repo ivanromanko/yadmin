@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 '''
 manage_users
 
@@ -7,10 +6,7 @@ Module for user managment
 Модуль для управления пользователями
 '''
 from cgi import FieldStorage
-from jinja2 import Environment, PackageLoader
 import json
-# import logging
-# from logging import handlers
 
 from lib import util
 from lib.YandexMail import ActionException
@@ -42,11 +38,7 @@ def main(environ, start_response):
 
 
 def make_head(mycgi, environ):
-    params = {'server_start_time': environ['server_start_time'], 'domains': sorted([i for i in api])}
-    env = Environment(loader=PackageLoader('apps', 'templates'))
-    template = env.get_template('mu.html')
-    result = template.render(params)
-    return [result.encode('utf-8')]
+    return [open('apps/templates/mu.html', 'r').read().encode('utf-8')]
 
 
 # @decorators.dumpencode
