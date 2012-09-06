@@ -4,6 +4,7 @@ only the first domain from the DOMAINS list will be used.
 '''
 
 REFRESH_LOCALSTORAGE_ON_START = 1
+CACHE_USERS = 1
 
 
 #===============================================================================
