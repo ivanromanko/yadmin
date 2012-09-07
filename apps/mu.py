@@ -16,6 +16,9 @@ from config import settings
 api = settings.API
 
 def main(environ, start_response):
+    '''
+    Перенаправляет запросы по "do_what"
+    '''
     mycgi = util.cook_cgi(FieldStorage(environ=environ))
     
     if 'do_what' not in mycgi:
@@ -39,6 +42,9 @@ def main(environ, start_response):
 
 
 def make_head(mycgi, environ):
+    '''
+    Возвращает начальную страницу приложения
+    '''
     return [open('apps/templates/mu.html', 'r').read().encode('utf-8')]
 
 
@@ -75,6 +81,9 @@ def edit_forward(mycgi, environ):
 @dumpencode
 @tryex()
 def refresh_users_list(mycgi, environ):
+     '''
+     Получает список всех пользователей каждого домена
+     '''
     users = {}
     for i in api:
         users[i] = []
@@ -91,17 +100,22 @@ def refresh_users_list(mycgi, environ):
 @dumpencode
 @tryex()
 def get_user_info(mycgi, environ):
+    '''
+    Получает информацию о пользователе
+    '''
     res = api[mycgi['domain']].getUserInfo(mycgi['login'])
     res['signed_eula'] = 1 if res['signed_eula'] == '1' else None
     res['sex_male'] = 1 if res['sex']=='1' else None
     res['sex_female'] = 1 if res['sex']=='2' else None
-    # res['redirects'] = api[mycgi['domain']].getForwarding(mycgi['login'])
     return {'items': res, 'success': 1}
 
 
 @dumpencode
 @tryex()
 def get_recieves_list(mycgi, environ):
+    '''
+    Получает список переадресаций от пользователей из списка "groups" к пользователю "login"
+    '''
     res = []
     for i in json.loads(mycgi['groups']):
         tmp = api[mycgi['domain']].getForwarding(i)
@@ -109,13 +123,15 @@ def get_recieves_list(mycgi, environ):
             if '{}@{}'.format(mycgi['login'], mycgi['domain']) == j['filter_param']:
                 j['filter_param'] = i
                 res.append(j)
-
     return {'items': res, 'success': 1}
 
 
 @dumpencode
 @tryex()
 def get_forwards_list(mycgi, environ):
+    '''
+    Получает список переадресаций по логину пользователя
+    '''
     res = api[mycgi['domain']].getForwarding(mycgi['login'])
     for i in res:
         i['from'] = mycgi['login']
@@ -126,17 +142,18 @@ def get_forwards_list(mycgi, environ):
 @dumpencode
 @tryex()
 def add_forward(mycgi, environ):
-    # try:
-    #     api[mycgi['domain']].setForwarding(mycgi['from'], mycgi['to'], mycgi.get('copy', "no"))
-    # except ActionException as err:
-    #     return {'success': 0, 'err': str(err), 'msg': 'При создании переадресации произошла ошибка'}
-    
+    '''
+    Добавляет переадресацию от "from" к "to" по-умолчанию без сохранения копии
+    '''
     api[mycgi['domain']].setForwarding(mycgi['from'], mycgi['to'], mycgi.get('copy', "no"))
     return {'success': 1}
 
 
 @dumpencode
 def remove_forwards(mycgi, environ):
+    '''
+    Удаляет переданные в виде списка словарей записи о переадрессации
+    '''
     err = []
     for i in json.loads(mycgi['forwards_to_remove']):
         try:
@@ -161,13 +178,7 @@ def save_user_info(mycgi, environ):
         Маленькая функция для сохранения неосновной информации о пользователе
         """
         if any([param[i] for i in param.keys() if i!='login']):
-            # try:
             api[mycgi['domain']].editUserDetails(**param)
-            # except ActionException as err:
-            #     return {'success': 0, 'err': str(err), 'msg': 'При сохранении информации о пользователе произошла ошибка'}
-            # else:
-                # return {'success': 1}
-        # else:
         return {'success': 1}
 
     param = json.loads(mycgi['param'])

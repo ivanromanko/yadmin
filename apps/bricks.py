@@ -13,6 +13,9 @@ from lib.decorators import dumpencode
 api = settings.API
 
 def main(environ, start_response):
+    '''
+    Перенаправляет запросы по "do_what"
+    '''
     mycgi = util.cook_cgi(FieldStorage(environ=environ))
     
     do_what = mycgi['do_what']
@@ -27,9 +30,15 @@ def main(environ, start_response):
 
 @dumpencode
 def get_settings(mycgi, environ):
+    '''
+    Получает и отдаёт приложению основные настройки
+    '''
     return {'items': sorted([i for i in api]), 'cache_users': settings.CACHE_USERS, 'success': 1}
 
 
 @dumpencode
 def get_server_start_time(mycgi, environ):
+    '''
+    Возвращает время старта сервера
+    '''
     return {'server_start_time': environ['server_start_time'], 'success': 1}
