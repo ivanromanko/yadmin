@@ -5,19 +5,23 @@
 import functools
 import time
 import json
+from lib.YandexMail import ActionException
 
-def tryex(foo):
+def tryex(msg=None):
     '''
-    Декоратор, который выполняет переданную ему функцию и возвращает её результат.
-    Если при выполнении произошла ошибка, он вернёт trace
+    Функция, которая создаёт декоратор, который выполняет переданную ему функцию и возвращает её результат
+    с заданным комментарием к ошибке.
+    Если при выполнении произошла ошибка, он вернёт trace.
     '''
-    @functools.wraps(foo) # Заменяет строчки с присваиванием имени и докстринга
-    def wrapper(*args, **kwargs):
-        try:
-            return foo(*args, **kwargs)
-        except Exception as err:
-            return {'success': 0, 'error': '{} Произошла ошибка'.format(time.strftime('%d.%m.%y %H:%M:%S')), 'debug': err}
-    return wrapper
+    def decorator(foo):
+        @functools.wraps(foo) # Заменяет строчки с присваиванием имени и докстринга
+        def wrapper(*args, **kwargs):
+            try:
+                return foo(*args, **kwargs)
+            except ActionException as err:
+                return {'success': 0, 'msg': '{} {}'.format(time.strftime('%d.%m.%y %H:%M:%S'), msg or 'Произошла ошибка.'), 'err': str(err)}
+        return wrapper
+    return decorator
 
 def dumpencode(foo):
     '''

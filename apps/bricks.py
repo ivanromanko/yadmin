@@ -8,7 +8,7 @@ from cgi import FieldStorage
 from config import settings
 from lib import util
 from lib.YandexMail import ActionException
-from lib import decorators
+from lib.decorators import dumpencode
 
 api = settings.API
 
@@ -25,11 +25,11 @@ def main(environ, start_response):
     return functions[do_what]['exec'](mycgi, environ)
 
 
-@decorators.dumpencode
+@dumpencode
 def get_settings(mycgi, environ):
     return {'items': sorted([i for i in api]), 'cache_users': settings.CACHE_USERS, 'success': 1}
 
 
-@decorators.dumpencode
+@dumpencode
 def get_server_start_time(mycgi, environ):
     return {'server_start_time': environ['server_start_time'], 'success': 1}

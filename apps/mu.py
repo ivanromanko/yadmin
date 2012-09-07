@@ -10,7 +10,7 @@ import json
 
 from lib import util
 from lib.YandexMail import ActionException
-from lib import decorators
+from lib.decorators import tryex, dumpencode
 from config import settings
 
 api = settings.API
@@ -42,7 +42,7 @@ def make_head(mycgi, environ):
     return [open('apps/templates/mu.html', 'r').read().encode('utf-8')]
 
 
-# @decorators.dumpencode
+# @dumpencode
 # def list_users_ajax(mycgi, environ):
 #     startRec = mycgi.get('startRec')
 #     delta = mycgi.get('delta')
@@ -56,7 +56,6 @@ def make_head(mycgi, environ):
 
 #     return {'items': users, 'success': 1}
 
-# @decorators.dumpencode
 def edit_forward(mycgi, environ):
     '''
     Изменяет параметр "оставить копию себе при пересылке"
@@ -73,7 +72,8 @@ def edit_forward(mycgi, environ):
         return tmp1
 
 
-@decorators.dumpencode
+@dumpencode
+@tryex()
 def refresh_users_list(mycgi, environ):
     users = {}
     for i in api:
@@ -88,7 +88,8 @@ def refresh_users_list(mycgi, environ):
     return {'items': users, 'success': 1}
 
 
-@decorators.dumpencode
+@dumpencode
+@tryex()
 def get_user_info(mycgi, environ):
     res = api[mycgi['domain']].getUserInfo(mycgi['login'])
     res['signed_eula'] = 1 if res['signed_eula'] == '1' else None
@@ -98,7 +99,8 @@ def get_user_info(mycgi, environ):
     return {'items': res, 'success': 1}
 
 
-@decorators.dumpencode
+@dumpencode
+@tryex()
 def get_recieves_list(mycgi, environ):
     res = []
     for i in json.loads(mycgi['groups']):
@@ -111,7 +113,8 @@ def get_recieves_list(mycgi, environ):
     return {'items': res, 'success': 1}
 
 
-@decorators.dumpencode
+@dumpencode
+@tryex()
 def get_forwards_list(mycgi, environ):
     res = api[mycgi['domain']].getForwarding(mycgi['login'])
     for i in res:
@@ -120,16 +123,19 @@ def get_forwards_list(mycgi, environ):
     return {'items': res, 'success': 1}
 
 
-@decorators.dumpencode
+@dumpencode
+@tryex()
 def add_forward(mycgi, environ):
-    try:
-        api[mycgi['domain']].setForwarding(mycgi['from'], mycgi['to'], mycgi.get('copy', "no"))
-    except ActionException as err:
-        return {'success': 0, 'err': str(err), 'msg': 'При создании переадресации произошла ошибка'}
+    # try:
+    #     api[mycgi['domain']].setForwarding(mycgi['from'], mycgi['to'], mycgi.get('copy', "no"))
+    # except ActionException as err:
+    #     return {'success': 0, 'err': str(err), 'msg': 'При создании переадресации произошла ошибка'}
+    
+    api[mycgi['domain']].setForwarding(mycgi['from'], mycgi['to'], mycgi.get('copy', "no"))
     return {'success': 1}
 
 
-@decorators.dumpencode
+@dumpencode
 def remove_forwards(mycgi, environ):
     err = []
     for i in json.loads(mycgi['forwards_to_remove']):
@@ -142,27 +148,27 @@ def remove_forwards(mycgi, environ):
     return {'success': 1}
 
 
-@decorators.dumpencode
+@dumpencode
 def save_user_info(mycgi, environ):
     '''
     Сохраняет информацию о пользователе. Перед сохранением проверяет, есть ли такой пользователь в домене.
     Если нет, что считает, что производится добавление нового пользователя. Сначала заводит пользователя
     с предоставленными логином и паролем, а потом заполняет остальную информацию, если она передана.
     '''
+    @tryex('При сохранении информации о пользователе произошла ошибка')
     def save_user_details(param):
         """
         Маленькая функция для сохранения неосновной информации о пользователе
         """
         if any([param[i] for i in param.keys() if i!='login']):
-            try:
-                api[mycgi['domain']].editUserDetails(**param)
-            except ActionException as err:
-                return {'success': 0, 'err': str(err), 'msg': 'При сохранении информации о пользователе произошла ошибка'}
-            else:
-                return {'success': 1}
-        else:
-            return {'success': 1}
-
+            # try:
+            api[mycgi['domain']].editUserDetails(**param)
+            # except ActionException as err:
+            #     return {'success': 0, 'err': str(err), 'msg': 'При сохранении информации о пользователе произошла ошибка'}
+            # else:
+                # return {'success': 1}
+        # else:
+        return {'success': 1}
 
     param = json.loads(mycgi['param'])
     for i in param:
@@ -180,8 +186,6 @@ def save_user_info(mycgi, environ):
             return save_user_details(param)
     else:
         return save_user_details(param)
-            
-
 
 
 
