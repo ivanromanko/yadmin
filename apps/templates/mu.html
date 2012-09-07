@@ -284,17 +284,27 @@
             // Настройка вывода ошибок и информации
             m = new otmes ('', {});
             m_modal = new otmes ('', {errorDiv: 'div_modal_error', messagesDiv: 'div_modal_message', debugDiv: 'div_modal_debug'});
+            cache_users = 1;
+            
             if (!localStorage.getItem('do_not_show_info_alert')) {
                 $('#info_alert').show();
             }
-            
-            // Загрузка данных о подключённых доменах для тулбара
-            $.getJSON('/bricks', {do_what: 'get_domains_list'}).done(function(data){
-              var toolbar_tmpl = Handlebars.compile($('#toolbar_tmpl').html());
+            // Загрузка настроек: подключённых доменов для тулбара, опции кэширования
+            $.getJSON('/bricks', {do_what: 'get_settings'}).done(function(data){
               if (data.success){
+                var toolbar_tmpl = Handlebars.compile($('#toolbar_tmpl').html());
                 $('#div_toolbar').append(toolbar_tmpl(data));
+                cache_users = data.cache_users;
               }
             })
+
+            
+            // $.getJSON('/bricks', {do_what: 'get_domains_list'}).done(function(data){
+            //   var toolbar_tmpl = Handlebars.compile($('#toolbar_tmpl').html());
+            //   if (data.success){
+            //     $('#div_toolbar').append(toolbar_tmpl(data));
+            //   }
+            // })
 
             // Проверяем актуальность списка пользователей
             $.getJSON('/bricks', {do_what: 'get_server_start_time'}).done(function(data){
@@ -302,6 +312,10 @@
                 console.log(data);
                 var server_start_time = data.server_start_time,
                   last_sync = localStorage.getItem('yadmin_users_list_last_sync_time');
+                if (!cache_users){
+                  //Обнуляем last_sync чтобы точно получить список заново
+                  last_sync = '0';
+                }
                 if (last_sync != server_start_time) {
                   localStorage.setItem('yadmin_users_list_last_sync_time', String(server_start_time));
                   localStorage.removeItem('do_not_show_info_alert');

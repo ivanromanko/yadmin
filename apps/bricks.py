@@ -5,19 +5,19 @@
 import json
 from cgi import FieldStorage
 
-from config.settings import settings
+from config import settings
 from lib import util
 from lib.YandexMail import ActionException
 from lib import decorators
 
-api = settings.api
+api = settings.API
 
 def main(environ, start_response):
     mycgi = util.cook_cgi(FieldStorage(environ=environ))
     
     do_what = mycgi['do_what']
     functions = {
-                 'get_domains_list': {'exec': get_domains_list},
+                 'get_settings': {'exec': get_settings},
                  'get_server_start_time': {'exec': get_server_start_time}
                  }
     if do_what not in functions:
@@ -26,8 +26,8 @@ def main(environ, start_response):
 
 
 @decorators.dumpencode
-def get_domains_list(mycgi, environ):
-    return {'items': sorted([i for i in api]), 'success': 1}
+def get_settings(mycgi, environ):
+    return {'items': sorted([i for i in api]), 'cache_users': settings.CACHE_USERS, 'success': 1}
 
 
 @decorators.dumpencode

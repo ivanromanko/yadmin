@@ -11,9 +11,9 @@ import json
 from lib import util
 from lib.YandexMail import ActionException
 from lib import decorators
-from config.settings import settings
+from config import settings
 
-api = settings.api
+api = settings.API
 
 def main(environ, start_response):
     mycgi = util.cook_cgi(FieldStorage(environ=environ))
