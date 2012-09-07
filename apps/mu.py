@@ -29,6 +29,7 @@ def main(environ, start_response):
                  'get_forwards_list': {'exec': get_forwards_list},
                  'get_recieves_list': {'exec': get_recieves_list},
                  'add_forward': {'exec': add_forward},
+                 'edit_forward': {'exec': edit_forward},
                  'remove_forwards': {'exec': remove_forwards},
                  'save_user_info': {'exec': save_user_info}
                  }
@@ -54,6 +55,22 @@ def make_head(mycgi, environ):
 #         return {'success': 0, 'debug': err, 'msg': 'Произошла ошибка получения списка email-адресов домена'}
 
 #     return {'items': users, 'success': 1}
+
+# @decorators.dumpencode
+def edit_forward(mycgi, environ):
+    '''
+    Изменяет параметр "оставить копию себе при пересылке"
+    путём удаления и создания пераедресации заново.
+    '''
+    tmp1 = remove_forwards({'forwards_to_remove': json.dumps([{'from': mycgi['from'], 'id': mycgi['id']}]),
+                           'domain': mycgi['domain']}, environ)
+    if json.loads(tmp1[0].decode('utf-8'))['success']:
+        return add_forward({'from': mycgi['from'],
+                            'to': mycgi['to'],
+                            'copy': mycgi['checked'],
+                            'domain': mycgi['domain']}, environ)
+    else:
+        return tmp1
 
 
 @decorators.dumpencode
@@ -97,13 +114,16 @@ def get_recieves_list(mycgi, environ):
 @decorators.dumpencode
 def get_forwards_list(mycgi, environ):
     res = api[mycgi['domain']].getForwarding(mycgi['login'])
+    for i in res:
+        i['from'] = mycgi['login']
+        i['copy'] = 1 if i['copy'] == 'yes' else 0
     return {'items': res, 'success': 1}
 
 
 @decorators.dumpencode
 def add_forward(mycgi, environ):
     try:
-        api[mycgi['domain']].setForwarding(mycgi['from'], mycgi['to'], "no")
+        api[mycgi['domain']].setForwarding(mycgi['from'], mycgi['to'], mycgi.get('copy', "no"))
     except ActionException as err:
         return {'success': 0, 'err': str(err), 'msg': 'При создании переадресации произошла ошибка'}
     return {'success': 1}

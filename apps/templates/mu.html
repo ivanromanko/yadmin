@@ -71,7 +71,7 @@
                               {{this}}
                             </td>
                             <td>
-                              <a class="unmark_as_group" href="#" data-name="{{this}}" title="Удалить признак группы"><i class='icon-remove'></i>
+                              <a class="unmark_as_group" href="#" data-name="{{this}}" title="Удалить признак группы"><i class='icon-remove'></i></a>
                             </td>
                         </tr>
                     {{/each}}
@@ -86,6 +86,7 @@
             <thead>
               <tr>
                 <th>Кому</th>
+                <th>Оставлять копию</th>
                 <th>Удалить</th>
               </tr>
             </thead>
@@ -97,7 +98,10 @@
                       {{this.filter_param}}
                     </td>
                     <td>
-                      <input type="checkbox" class="remove_recipient" data-id="{{this.id}}">
+                      <input type="checkbox" class="keep_copy" data-id="{{this.id}}" data-from="{{this.from}}" data-to="{{this.filter_param}}" {{#if this.copy}}checked{{/if}}>
+                    </td>
+                    <td>
+                      <a class="remove_forwarding" href="#" data-from="{{this.from}}" data-id="{{this.id}}" title="Удалить"><i class='icon-remove'></i></a>
                     </td>
                   </tr>
                 {{/if}}
@@ -124,7 +128,7 @@
                       {{this.filter_param}}
                     </td>
                     <td>
-                      <input type="checkbox" class="remove_sender" data-from="{{this.filter_param}}" data-id="{{this.id}}">
+                      <a class="remove_sender" href="#" data-from="{{this.filter_param}}" data-id="{{this.id}}" title="Удалить"><i class='icon-remove'></i></a>
                     </td>
                   </tr>
                 {{/if}}
@@ -298,14 +302,6 @@
               }
             })
 
-            
-            // $.getJSON('/bricks', {do_what: 'get_domains_list'}).done(function(data){
-            //   var toolbar_tmpl = Handlebars.compile($('#toolbar_tmpl').html());
-            //   if (data.success){
-            //     $('#div_toolbar').append(toolbar_tmpl(data));
-            //   }
-            // })
-
             // Проверяем актуальность списка пользователей
             $.getJSON('/bricks', {do_what: 'get_server_start_time'}).done(function(data){
               if (data.success){
@@ -331,6 +327,21 @@
             })
             
             // Вешаем события на различные действия
+            $("#btn_filter_users").on('click', function(e){
+                filter_users();
+                e.preventDefault();
+            });
+            $("#btn_add_user").on('click', add_user);
+            $('#filter_str').on('keydown', function(event){
+                if (event.keyCode==13){
+                    event.preventDefault();
+                    filter_users();
+                } else if (event.keyCode==27) {
+                    $('#filter_str').val('');
+                    filter_users();
+                }
+            })
+
             $(document).on('click', 'div.btn-group button:even', function(){
                 $('div.btn-group button.btn-primary').removeClass('btn-primary');
                 $(this).addClass('btn-primary').next().addClass('btn-primary');
@@ -360,16 +371,6 @@
               unmark_as_group($(this).data('name'));
             });
 
-            $('#filter_str').on('keydown', function(event){
-                if (event.keyCode==13){
-                    event.preventDefault();
-                    filter_users();
-                } else if (event.keyCode==27) {
-                    $('#filter_str').val('');
-                    filter_users();
-                }
-            })
-
             $(document).on('keydown', '#input_add_forward', function(event){
                 if (event.keyCode==13){
                     event.preventDefault();
@@ -380,15 +381,54 @@
                 add_forward($(this).data('from'), $("#input_add_forward").val());
             })
 
-            $("#btn_filter_users").on('click', function(e){
-                filter_users();
-                e.preventDefault();
+            $(document).on('click', "a.remove_forwarding", function(e){
+              e.preventDefault();
+              remove_forwards([{from: $(this).data('from'), id: $(this).data('id')}])
             });
 
-            $("#btn_add_user").on('click', add_user);
+            $(document).on('click', "a.remove_sender", function(e){
+              e.preventDefault();
+              remove_forwards([{from: $(this).data('from'), id: $(this).data('id')}])
+            });
+
+            $(document).on('change', "input.keep_copy", function(){
+              var checked = 'no';
+              if ($(this).is(':checked')){
+                checked = 'yes';
+              }
+              // console.log({from: $(this).data('from'), id: $(this).data('id'), to: $(this).data('to'), checked: checked});
+              edit_forward({from: $(this).data('from'), id: $(this).data('id'), to: $(this).data('to'), checked: checked})
+            });
 
             $(document).on('click', "#btn_save_user", save_user);
         }) // document.ready
+
+        function edit_forward(params){
+          var params = {do_what: 'edit_forward',
+                        domain: localStorage.getItem('current_domain'),
+                        from: params.from,
+                        to: params.to,
+                        id: params.id,
+                        checked: params.checked}
+          $.getJSON('/mu', params).done(function(data){
+            if (data.success){
+                $("#btn_add_forward").addClass('btn-success');
+                setTimeout(function () {
+                    $("#btn_add_forward").removeClass('btn-success');
+                }, 3000);
+                $('#div_modal_error').hide();
+                get_forwards_list();
+            } else {
+                $("#btn_add_forward").toggleClass('btn-danger');
+                setTimeout(function () {
+                    $("#btn_add_forward").removeClass('btn-danger');
+                }, 3000);
+                m_modal.e(data.msg);
+                m_modal.e(data.err);
+                $('#div_modal_error').show();
+            }
+          })
+        }
 
         function get_recieves_list(login){
           var params = {do_what: 'get_recieves_list',
@@ -412,7 +452,6 @@
                     $("#btn_add_forward").removeClass('btn-success');
                 }, 3000);
                 $('#div_modal_error').hide();
-                // var tmpl_redir = Handlebars.compile($('#forward_tmpl').html());
                 get_forwards_list();
             } else {
                 $("#btn_add_forward").toggleClass('btn-danger');
@@ -439,20 +478,20 @@
             } else{
                 param['sex'] = '';
             }
-            var forwards_to_remove = [];
-            $.each($("input.remove_recipient"), function(){
-              if ($(this).is(':checked')){
-                forwards_to_remove.push({from: param.login, id: $(this).data('id')});
-              }
-            })
-            $.each($("input.remove_sender"), function(){
-              if ($(this).is(':checked')){
-                forwards_to_remove.push({from: $(this).data('from'), id: $(this).data('id')});
-              }
-            })
-            if (forwards_to_remove.length){
-              remove_forwards(forwards_to_remove);
-            }
+            // var forwards_to_remove = [];
+            // $.each($("input.remove_recipient"), function(){
+            //   if ($(this).is(':checked')){
+            //     forwards_to_remove.push({from: param.login, id: $(this).data('id')});
+            //   }
+            // })
+            // $.each($("input.remove_sender"), function(){
+            //   if ($(this).is(':checked')){
+            //     forwards_to_remove.push({from: $(this).data('from'), id: $(this).data('id')});
+            //   }
+            // })
+            // if (forwards_to_remove.length){
+            //   remove_forwards(forwards_to_remove);
+            // }
             $.getJSON('/mu', {do_what: 'save_user_info', param: JSON.stringify(param), domain: localStorage.getItem('current_domain')}).done(function(data){
                 if (data.success){
                     $("#btn_save_user").addClass('btn-success');
@@ -476,16 +515,14 @@
             })
         }
 
-        function remove_forwards(login, forwards_to_remove){
+        function remove_forwards(forwards_to_remove){
           $.getJSON('/mu', {do_what: 'remove_forwards', domain: localStorage.getItem('current_domain'),
-            login: login, forwards_to_remove: JSON.stringify(forwards_to_remove)}).done(function(data){
+            forwards_to_remove: JSON.stringify(forwards_to_remove)}).done(function(data){
             if (data.success){
                 $("#btn_add_forward").addClass('btn-success');
                 setTimeout(function () {
                     $("#btn_add_forward").removeClass('btn-success');
                 }, 3000);
-                // $('#div_modal_error').hide();
-                // $("#btn_cancel_changes").html('Закрыть');
                 get_forwards_list(login);
             } else {
                 $("#btn_add_forward").toggleClass('btn-danger');
