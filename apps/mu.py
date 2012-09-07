@@ -81,9 +81,9 @@ def edit_forward(mycgi, environ):
 @dumpencode
 @tryex()
 def refresh_users_list(mycgi, environ):
-     '''
-     Получает список всех пользователей каждого домена
-     '''
+    '''
+    Получает список всех пользователей каждого домена
+    '''
     users = {}
     for i in api:
         users[i] = []
