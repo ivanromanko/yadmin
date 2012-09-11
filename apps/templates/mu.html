@@ -15,6 +15,28 @@
     <script src="/static/js/otmes.js"></script>
     <script src="/static/js/bootstrap.js"></script>
 
+    <script id="div_delete_confirmation_tmpl" type="text/x-handlebars-template">
+      <div id="div_delete_confirmation" class="modal hide fade">
+        <div class="modal-header">
+          <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+          <h3>Вы уверены?</h3>
+        </div>
+        <div id="div_modal_confirmation_error" class="alert alert-error" style="display: none;">
+          <button type="button" class="close" data-dismiss="alert">×</button>
+        </div>
+        <div id="div_modal_confirmation_message" class="alert alert-info" style="display: none;">
+          <button type="button" class="close" data-dismiss="alert">×</button>
+        </div>
+        <div id="div_modal_confirmation_debug" class="alert alert-info" style="display: none;">
+          <button type="button" class="close" data-dismiss="alert">×</button>
+        </div>
+        <div class="modal-footer">
+          <button id="btn_close_confirmation_modal" class="btn" data-dismiss="modal">Отмена</button>
+          <button id="btn_delete_user" class="btn btn-danger" data-name="{{name}}">Удалить</button>
+        </div>
+      </div>
+    </script>
+
     <script id="toolbar_tmpl" type="text/x-handlebars-template">
       {{#each items }}
         <div class="btn-group">
@@ -37,6 +59,7 @@
                     <tr>
                         <th>Люди</th>
                         <th></th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -47,6 +70,9 @@
                             </td>
                             <td>
                               <a class="mark_as_group" href="#" data-name="{{this}}" title="Отметить как группу"><i class='icon-arrow-right'></i></a>
+                            </td>
+                            <td>
+                              <a class="delete_user" href="#" data-name="{{this}}" title="Удалить пользователя"><i class='icon-remove'></i></a>
                             </td>
                         </tr>
                     {{/each}}
@@ -80,7 +106,7 @@
         
     </script>
 
-    <script id="tmpl_forwards_list" type="text/x-handlebars-template">
+    <script id="forwards_list_tmpl" type="text/x-handlebars-template">
         
           <table id="table_forwards_list" class="table table-condensed">
             <thead>
@@ -111,7 +137,7 @@
         
     </script>
 
-    <script id="tmpl_recieves_list" type="text/x-handlebars-template">
+    <script id="recieves_list_tmpl" type="text/x-handlebars-template">
         
           <table id="table_forwards_list" class="table table-condensed">
             <thead>
@@ -266,13 +292,13 @@
                 </div>
               </div>
               <div id="div_modal_error" class="alert alert-error" style="display: none;">
-                <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
+                <button type="button" class="close" data-dismiss="alert">×</button>
               </div>
               <div id="div_modal_message" class="alert alert-info" style="display: none;">
-                <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
+                <button type="button" class="close" data-dismiss="alert">×</button>
               </div>
               <div id="div_modal_debug" class="alert alert-info" style="display: none;">
-                <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
+                <button type="button" class="close" data-dismiss="alert">×</button>
               </div>
               <div class="modal-footer">
                 <button id="btn_cancel_changes" class="btn" data-dismiss="modal">Отмена</button>
@@ -288,6 +314,7 @@
             // Настройка вывода ошибок и информации
             m = new otmes ('', {});
             m_modal = new otmes ('', {errorDiv: 'div_modal_error', messagesDiv: 'div_modal_message', debugDiv: 'div_modal_debug'});
+            m_modal_confirmation = new otmes ('', {errorDiv: 'div_modal_confirmation_error', messagesDiv: 'div_modal_confirmation_message', debugDiv: 'div_modal_confirmation_debug'});
             cache_users = 1;
             
             if (!localStorage.getItem('do_not_show_info_alert')) {
@@ -371,6 +398,20 @@
               unmark_as_group($(this).data('name'));
             });
 
+            $(document).on('click', 'a.delete_user', function(e){
+              e.preventDefault();
+              if ($("#div_delete_confirmation").length){
+                $("#div_delete_confirmation").remove();
+              }
+              // console.log($(this).data('name'));
+              var div_delete_confirmation = Handlebars.compile($("#div_delete_confirmation_tmpl").html());
+              $(div_delete_confirmation({name: $(this).data('name')})).modal();
+            });
+            $(document).on('click', '#btn_delete_user', function(e){
+              console.log('#btn_delete_user presshed');
+              delete_user($(this).data('name'));
+            });
+
             $(document).on('keydown', '#input_add_forward', function(event){
                 if (event.keyCode==13){
                     event.preventDefault();
@@ -402,6 +443,28 @@
 
             $(document).on('click', "#btn_save_user", save_user);
         }) // document.ready
+
+        function delete_user(name){
+          console.log('delete_user called for ', name);
+
+          $.getJSON('/mu', {do_what: 'delete_user', login: name, domain: localStorage.getItem('current_domain')}).done(function(data){
+            console.log(data);
+            if (data.success){
+              $("#btn_delete_user").addClass('btn-success');
+                setTimeout(function () {
+                    $("#btn_delete_user").removeClass('btn-success');
+                }, 3000);
+                $("#btn_close_confirmation_modal").html('Закрыть');
+                $('#div_modal_confirmation_error').hide();
+                refresh_users_list().done(function(){
+                  draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+localStorage.getItem('current_domain'))), 'users_tmpl', 'users_table');
+                });
+            } else {
+              m_modal_confirmation.e(data.msg);
+              m_modal_confirmation.e(data.err);
+            }
+          })
+        }
 
         function edit_forward(params){
           var params = {do_what: 'edit_forward',
@@ -437,9 +500,9 @@
                         groups: localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))};
           return $.getJSON('/mu', params).done(function(data){
             if (data.success){
-              var tmpl_recieves_list = Handlebars.compile($("#tmpl_recieves_list").html());
+              var recieves_list_tmpl = Handlebars.compile($("#recieves_list_tmpl").html());
               console.log(data);
-              $('#modal_recieves_list').append(tmpl_recieves_list(data));  
+              $('#modal_recieves_list').append(recieves_list_tmpl(data));  
             } else {m.e('Произошла ошибка')};
           })
         }  
@@ -547,9 +610,9 @@
         
         function get_forwards_list(login){
           return $.getJSON('/mu', {do_what: 'get_forwards_list', login: login, domain: localStorage.getItem('current_domain')}).done(function(data){
-            var tmpl_forwards_list = Handlebars.compile($("#tmpl_forwards_list").html());
+            var forwards_list_tmpl = Handlebars.compile($("#forwards_list_tmpl").html());
             console.log(data);
-            $('#modal_forwards_list').append(tmpl_forwards_list(data));
+            $('#modal_forwards_list').append(forwards_list_tmpl(data));
           })
         }
 

@@ -34,7 +34,8 @@ def main(environ, start_response):
                  'add_forward': {'exec': add_forward},
                  'edit_forward': {'exec': edit_forward},
                  'remove_forwards': {'exec': remove_forwards},
-                 'save_user_info': {'exec': save_user_info}
+                 'save_user_info': {'exec': save_user_info},
+                 'delete_user': {'exec': delete_user}
                  }
     if do_what not in functions:
         return ['<br><br><br><div align="center"><p>Произошло страшное</p></div>'.encode('utf-8')]
@@ -61,6 +62,16 @@ def make_head(mycgi, environ):
 #         return {'success': 0, 'debug': err, 'msg': 'Произошла ошибка получения списка email-адресов домена'}
 
 #     return {'items': users, 'success': 1}
+
+@dumpencode
+@tryex()
+def delete_user(mycgi, environ):
+    '''
+    Удаляет пользователя.
+    '''
+    api[mycgi['domain']].deleteUser(mycgi['login'])
+    return {'success': 1}
+
 
 def edit_forward(mycgi, environ):
     '''
