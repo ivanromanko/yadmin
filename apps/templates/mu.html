@@ -384,16 +384,9 @@
                 draw_users(JSON.parse(localStorage.getItem('yadmin_users_'+$(this).data('domain'))), 'users_tmpl', 'users_table');
                 draw_users(JSON.parse(localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))), 'groups_tmpl', 'groups_table');
             })
-            $(document).on('dblclick', '#table_users_list td', function(){
-                view_user($(this).data('name'));
-            })
-            $(document).on('click', 'a.edit_user', function(e){
-              e.preventDefault();
-              view_user($(this).data('name')); 
-            });
-            $(document).on('dblclick', '#table_groups_list td', function(){
-                view_user($(this).data('name'), group=1);
-            })
+
+            bind_view_user_events();
+
             $(document).on('click', '#close_info_alert', function(){
                 localStorage.setItem('do_not_show_info_alert', 1);
             })
@@ -638,15 +631,39 @@
                     if (if_group){
                         data.items['is_group'] = 1;    
                     }
-                    $(view_user_modal(data.items)).modal().one('shown', function(){
-                      get_forwards_list(login);
-                      get_recieves_list(login);
-                    });                    
+                    $(view_user_modal(data.items)).modal()
+                      .one('shown', function(){
+                        get_forwards_list(login);
+                        get_recieves_list(login);
+                      })
+                      .on('hide', bind_view_user_events);                    
                 } else{
                     m.e(data.err);
                     m.m(data.msg);
                 }
             })
+        }
+
+        function bind_view_user_events(){
+          $(document).on('dblclick', '#table_users_list td', function(){
+            $(document).off('dblclick', '#table_users_list td');
+            $(document).off('dblclick', '#table_groups_list td');
+            $(document).off('click', 'a.edit_user')
+            view_user($(this).data('name'));
+          })
+          $(document).on('dblclick', '#table_groups_list td', function(){
+            $(document).off('dblclick', '#table_groups_list td');
+            $(document).off('dblclick', '#table_users_list td');
+            $(document).off('click', 'a.edit_user');
+            view_user($(this).data('name'), group=1);
+          })
+          $(document).on('click', 'a.edit_user', function(e){
+            e.preventDefault();
+            $(document).off('click', 'a.edit_user');
+            $(document).off('dblclick', '#table_users_list td');
+            $(document).off('dblclick', '#table_groups_list td');
+            view_user($(this).data('name')); 
+          });
         }
 
         function initial_draw(){
