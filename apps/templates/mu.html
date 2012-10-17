@@ -508,7 +508,7 @@
           var params = {do_what: 'get_recieves_list',
                         login: login,
                         domain: localStorage.getItem('current_domain'),
-                        groups: localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain'))};
+                        groups: localStorage.getItem('yadmin_groups_'+localStorage.getItem('current_domain')) || '[]'};
           return $.getJSON('/mu', params).done(function(data){
             if (data.success){
               var recieves_list_tmpl = Handlebars.compile($("#recieves_list_tmpl").html());
