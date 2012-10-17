@@ -70,7 +70,7 @@
                                 {{this}}
                             </td>
                             <td>
-                              <a class="edit_user" href="#" data-name="{{this}}"><i class="icon-edit"></i></a>
+                              <a class="edit_user" href="#" data-name="{{this}}" title="Редактировать"><i class="icon-edit"></i></a>
                             </td>
                             <td>
                               <a class="mark_as_group" href="#" data-name="{{this}}" title="Отметить как группу"><i class='icon-arrow-right'></i></a>
@@ -92,6 +92,7 @@
                     <tr>
                         <th>Группы</th>
                         <th></th>
+                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -99,6 +100,9 @@
                         <tr>
                             <td class='no_select_on_dbl_click' data-name={{this}}>
                               {{this}}
+                            </td>
+                            <td>
+                              <a class="edit_user" href="#" data-name="{{this}}" title="Редактировать"><i class="icon-edit"></i></a>
                             </td>
                             <td>
                               <a class="unmark_as_group" href="#" data-name="{{this}}" title="Удалить признак группы"><i class='icon-remove'></i></a>
@@ -111,7 +115,6 @@
     </script>
 
     <script id="forwards_list_tmpl" type="text/x-handlebars-template">
-        
           <table id="table_forwards_list" class="table table-condensed">
             <thead>
               <tr>
@@ -488,7 +491,7 @@
                     $("#btn_add_forward").removeClass('btn-success');
                 }, 3000);
                 $('#div_modal_error').hide();
-                get_forwards_list();
+                get_forwards_list(from);
             } else {
                 $("#btn_add_forward").toggleClass('btn-danger');
                 setTimeout(function () {
@@ -523,7 +526,7 @@
                     $("#btn_add_forward").removeClass('btn-success');
                 }, 3000);
                 $('#div_modal_error').hide();
-                get_forwards_list();
+                get_forwards_list(from);
             } else {
                 $("#btn_add_forward").toggleClass('btn-danger');
                 setTimeout(function () {
@@ -594,7 +597,7 @@
                 setTimeout(function () {
                     $("#btn_add_forward").removeClass('btn-success');
                 }, 3000);
-                get_forwards_list(login);
+                get_forwards_list(forwards_to_remove[0]['from']);
             } else {
                 $("#btn_add_forward").toggleClass('btn-danger');
                 setTimeout(function () {
@@ -620,7 +623,7 @@
           return $.getJSON('/mu', {do_what: 'get_forwards_list', login: login, domain: localStorage.getItem('current_domain')}).done(function(data){
             var forwards_list_tmpl = Handlebars.compile($("#forwards_list_tmpl").html());
             console.log(data);
-            $('#modal_forwards_list').append(forwards_list_tmpl(data));
+            $('#modal_forwards_list').html(forwards_list_tmpl(data));
           })
         }
 
