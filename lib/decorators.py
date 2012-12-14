@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 
-'''Модуль для хранения различных декораторов'''
+'''Модуль с разными декораторами'''
 
 import functools
 import time
 import json
 from lib.YandexMail import ActionException
+from urllib.error import HTTPError
 
 def tryex(msg=None):
     '''
@@ -19,7 +20,11 @@ def tryex(msg=None):
             try:
                 return foo(*args, **kwargs)
             except ActionException as err:
-                return {'success': 0, 'msg': '{} {}'.format(time.strftime('%d.%m.%y %H:%M:%S'), msg or 'Произошла ошибка.'), 'err': str(err)}
+                print({'success': 0, 'msg': '{} {}'.format(time.strftime('%H:%M:%S'), msg or 'Произошла ошибка в работе API'), 'err': str(err)})
+                return {'success': 0, 'msg': '{} {}'.format(time.strftime('%H:%M:%S'), msg or 'Произошла ошибка в работе API'), 'err': str(err)}
+            except HTTPError as err:
+                print({'success': 0, 'msg': '{} {}'.format(time.strftime('%H:%M:%S'), msg or 'Произошла ошибка при обращении к серверу Яндекса'), 'err': str(err)})
+                return {'success': 0, 'msg': '{} {}'.format(time.strftime('%H:%M:%S'), msg or 'Произошла ошибка при обращении к серверу Яндекса'), 'err': str(err)}
         return wrapper
     return decorator
 

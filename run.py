@@ -26,7 +26,7 @@ def app(environ, start_response):
     из словаря modules был изменён.
     '''
     environ['server_start_time'] = server_start_time
-    dw = re.search('^\/([^/]+)?', environ['PATH_INFO']).group(1)
+    dw = re.search('^\/([^/]+)?', environ['PATH_INFO']).group(1) or 'mu'
     if dw in modules:
         start_response('200 OK', [('Content-type', 'text/html')]) if dw!='static' else start_response('200 OK', [('Content-type', 'text/css')])
         f1, filename1, desc1 = imp.find_module('apps')
@@ -38,7 +38,8 @@ def app(environ, start_response):
             module = imp.load_module(modules[dw]['name'], f2, filename2, desc2)
         else:
             module = sys.modules[dw]
-        return module.main(environ, start_response) 
+        return module.main(environ, start_response)
+
     else:
         return ['Не понял задачи:-(<br>Проверьте адрес:{0}'.format(environ['PATH_INFO']).encode('utf-8')]
 
@@ -47,6 +48,6 @@ application = app
 if __name__ == '__main__':
     server = simple_server.WSGIServer(('', 7070), simple_server.WSGIRequestHandler,)
     server.set_app(app)
-    webbrowser.open('http://localhost:7070/mu')
+    webbrowser.open('http://localhost:7070')
     server.serve_forever()
     

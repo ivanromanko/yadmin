@@ -15,6 +15,9 @@ CACHE_USERS = 0 приведёт к получению списка пользо
 CACHE_USERS = 1
 
 API = {i['name']: YandexMail.UserApi(i['token'], log()) for i in token.DOMAINS}
+APIMULTI = {i['name']: YandexMail.UserApiMultiadmin(i['token'], log()) for i in token.DOMAINS}
+APIPOST = {i['name']: YandexMail.UserApiMultiadminPost(i['token'], log()) for i in token.DOMAINS}
+
 
 
 

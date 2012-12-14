@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+      <meta charset="UTF-8">
+      <title>Управление учётными записями </title>
+
+      <!-- <link rel="stylesheet" href="/static/css/bootstrap.css"> -->
+      <link rel="stylesheet" href="http://twitter.github.com/bootstrap/assets/css/bootstrap.css">
+      <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
+      <link rel="shortcut icon" href="http://twitter.github.com/bootstrap/assets/ico/favicon.ico">
+
+      <script src="/static/js/jquery.min.js"></script>
+      <script src="/static/js/handlebars-1.0.0.beta.6.js"></script>
+      <script src="/static/js/otclass.js"></script>
+      <script src="/static/js/otmes.js"></script>
+      <script src="/static/js/bootstrap.js"></script>
+      <script src="/static/js/domain_events.js"></script>
+      <script src="/static/js/domain_functions.js"></script>
+      <script src="/static/js/users_list_functions.js"></script>
+      <script src="/static/js/users_list_events.js"></script>
+      <script src="/static/js/modal_window_events.js"></script>
+      <script src="/static/js/modal_window_functions.js"></script>
+
+      <script type="text/javascript">
+          $(document).ready(function(){
+              // Настройка вывода ошибок и информации
+              m = new otmes ('', {});
+              m_modal = new otmes ('', {errorDiv: 'div_modal_error', messagesDiv: 'div_modal_message', debugDiv: 'div_modal_debug'});
+              m_modal_confirmation = new otmes ('', {errorDiv: 'div_modal_confirmation_error', messagesDiv: 'div_modal_confirmation_message', debugDiv: 'div_modal_confirmation_debug'});
+              cache_users = 1;
+              
+              if (!localStorage.getItem('do_not_show_info_alert')) {
+                  $('#info_alert').show();
+              }
+              
+              // Загрузка настроек: подключённых доменов для тулбара, опции кэширования
+              $.getJSON('/bricks', {do_what: 'get_settings'}).done(function(data){
+                if (data.success){
+                  var toolbar_tmpl = Handlebars.compile($('#toolbar_tmpl').html());
+                  $('#div_toolbar').append(toolbar_tmpl(data));
+                  cache_users = data.cache_users;
+                }
+              })
+
+              // Проверяем актуальность списка пользователей
+              $.getJSON('/bricks', {do_what: 'get_server_start_time'}).done(function(data){
+                if (data.success){
+                  var server_start_time = data.server_start_time,
+                    last_sync = localStorage.getItem('yadmin_users_list_last_sync_time');
+                  if (!cache_users){
+                    //Обнуляем last_sync чтобы точно получить список заново
+                    last_sync = '0';
+                  }
+                  if (last_sync != server_start_time) {
+                    localStorage.setItem('yadmin_users_list_last_sync_time', String(server_start_time));
+                    localStorage.removeItem('do_not_show_info_alert');
+                    console.log('last_sync', last_sync, 'server_start_time', server_start_time, last_sync==server_start_time);
+                    console.log('refreshing');
+                    refresh_users_list().done(function(data){
+                      $(document).trigger('users_list_freshness_ok');
+                    });
+                  } else {
+                    $(document).trigger('users_list_freshness_ok');
+                  }
+                }
+              })
+
+              // Вешаем события на различные действия
+
+              $(document).on('users_list_freshness_ok', function(){
+                $('div.btn-toolbar').find('div.btn-group').eq(0).find('button').eq(0).click();
+              });
+              $(document).on('click', 'div.btn-group button:even', draw_users_list);
+              $(document).on('click', 'a.domain_properties', function(){
+                $('div.btn-group button.btn-primary').removeClass('btn-primary');
+                $(this).closest('div').find('button').eq(0).addClass('btn-primary').next().addClass('btn-primary');
+              })
+              
+              bind_users_page_events();
+              bind_domain_page_events();
+              bind_modal_window_events();
+          }) // document.ready
+      </script>
+  </head>
+
+  <body>
+      <div class='container'>
+        <div id="div_toolbar" class='btn-toolbar'></div>
+        <div id="divError" class="alert alert-error" style="display: none;">
+          <button type="button" class="close">×</button>
+        </div>
+        <div id="divMessage" class="alert alert-info" style="display: none;">
+          <button type="button" class="close">×</button>
+        </div>
+        <div id="divDebug" class="alert alert-info" style="display: none;">
+          <button type="button" class="close">×</button>
+        </div>
+        <div id="shared_space"></div>
+      </div>
+      
+  </body>
+</html>
+
+<script id="domain_admins_list_tmlp" type="text/x-handlebars-template">
+  <table id="domain_admins_list" class="table table-condensed">
+    <thead>
+      <tr>
+        <th>Кто</th>
+        <th>Удалить</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+        <tr>
+          <td class=''>
+            {{this}}
+          </td>
+          <td>
+            <a class="remove_domain_admin" href="#" data-name="{{this}}" title="Удалить"><i class='icon-remove'></i></a>
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</script>
+
+<script id="domain_properties_tmpl" type="text/x-handlebars-template">
+  <div class='row'>
+    <div class="span3">
+      <p class="well well-small">Доп. администраторы домена</p>
+      <div class="input-append">
+        <input type="text" class="span2" placeholder="Логин на Яндексе" id="new_admin_name" autocomplete="off">
+        <button id="btn_add_domain_admin" class="btn " type="button"><i class="icon-plus"></i></button>
+      </div>
+      <div id='domain_admins'></div>
+    </div>
+    <div class="span3">
+      <p class="well well-small">email по-умолчанию</p>
+      <div class="input-append">
+        <input type="text" class="span2" placeholder="Логин в домене" id="new_default_domain_email" autocomplete="off">
+        <button id="btn_set_default_domain_email" class="btn " type="button"><i class="icon-ok"></i></button>
+      </div>
+    </div>
+    <div class="span3">
+      <form id="new_domain_logo_form" class="form-inline" enctype="multipart/form-data" name="new_domain_logo_form" style="display:none">
+        <input id="logo_file" type="file" style="display:none" name="logo_file">
+        <input type="hidden" name="domain" id="new_domain_logo_domain_field" >
+        <input type="hidden" name="do_what" value="set_new_domain_logo" >
+      </form>  
+      <p class="well well-small">Логотип домена</p>
+      <div class="input-append">
+        <input type="text" class="span2" id="new_domain_logo" autocomplete="off" placeholder='Не более 2 Мбайт'>
+        <button id="btn_select_new_domain_logo" class="btn" type="button"><i class="icon-folder-open"></i></button>
+        <button id="btn_set_new_domain_logo" class="btn" type="button"><i class="icon-ok"></i></button>
+      </div>
+      <div>
+        <button class='btn btn-block' id='btn_delete_domain_logo'>Удалить текущее лого</button>
+      </div>
+    </div>
+    <div class="span3">
+      <p class="well well-small">Отключение домена</p>
+      <div>
+        <button class='btn btn-block' id='btn_delete_domain'>Удалить домен</button>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+
+  </div>
+</script>
+
+<script id="view_users_base_tmpl" type="text/x-handlebars-template">
+  <div class="input-append">
+    <input type="text" placeholder="Имя" id="filter_str" autocomplete="off">
+    <button id="btn_filter_users" class="btn">Отбор</button>
+    <button id="btn_add_user" class="btn" type="button"><i class="icon-plus"></i> Добавить</button>
+  </div>
+  
+  <div class="alert alert-info" style="display: none;" id="info_alert">
+      <button type="button" class="close" data-dismiss="alert" id='close_info_alert'>×</button>
+      Двойной клик на пользователе для редактирования
+  </div>
+  
+  <div class='row'>
+      <div class="span6">
+          <div id='users_table'></div>
+      </div>
+      <div class="span6">
+          <div id='groups_table'></div>
+      </div>
+  </div>
+</script>
+
+<script id="div_delete_confirmation_tmpl" type="text/x-handlebars-template">
+  <div id="div_delete_confirmation" class="modal hide fade">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+      <h3>Вы уверены?</h3>
+    </div>
+    <div id="div_modal_confirmation_error" class="alert alert-error" style="display: none;">
+      <button type="button" class="close" data-dismiss="alert">×</button>
+    </div>
+    <div id="div_modal_confirmation_message" class="alert alert-info" style="display: none;">
+      <button type="button" class="close" data-dismiss="alert">×</button>
+    </div>
+    <div id="div_modal_confirmation_debug" class="alert alert-info" style="display: none;">
+      <button type="button" class="close" data-dismiss="alert">×</button>
+    </div>
+    <div class="modal-footer">
+      <button id="btn_close_confirmation_modal" class="btn" data-dismiss="modal">Отмена</button>
+      <button id="btn_confirm_{{do_what}}" class="btn btn-danger" data-name="{{name}}">Удалить</button>
+    </div>
+  </div>
+</script>
+
+<script id="toolbar_tmpl" type="text/x-handlebars-template">
+  {{#each items }}
+    <div class="btn-group">
+      <button class="btn" data-domain="{{ this }}" data-do_what="list_users"> {{ this }}
+      <button class="btn dropdown-toggle" data-toggle="dropdown">
+          <span class="caret"></span>
+      </button>
+      <ul class='dropdown-menu'>
+          <li><a href="#" class="domain_properties" data-domain="{{ this }}">Настройки домена</a></li>
+      </ul>
+    </div>
+  {{/each}}
+</script>
+
+<script id="users_tmpl" type="text/x-handlebars-template">
+  <table id="table_users_list" class="table table-condensed">
+    <thead>
+      <tr>
+        <th>Люди</th>
+        <th></th>
+          <th></th>
+          <th></th>
+        </tr>
+      </thead>
+    <tbody>
+      {{#each items}}
+        <tr>
+          <td class='no_select_on_dbl_click' data-name="{{this}}">
+            {{this}}
+          </td>
+          <td>
+            <a class="edit_user" href="#" data-name="{{this}}" title="Редактировать"><i class="icon-edit"></i></a>
+          </td>
+          <td>
+            <a class="mark_as_group" href="#" data-name="{{this}}" title="Отметить как группу"><i class='icon-arrow-right'></i></a>
+          </td>
+          <td>
+            <a class="delete_user" href="#" data-name="{{this}}" title="Удалить пользователя"><i class='icon-remove'></i></a>
+          </td>
+          </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</script>
+
+<script id="groups_tmpl" type="text/x-handlebars-template">
+  <table id="table_groups_list" class="table table-condensed">
+    <thead>
+      <tr>
+          <th>Группы</th>
+          <th></th>
+          <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+        <tr>
+          <td class='no_select_on_dbl_click' data-name={{this}}>
+            {{this}}
+          </td>
+          <td>
+            <a class="edit_user" href="#" data-name="{{this}}" title="Редактировать"><i class="icon-edit"></i></a>
+          </td>
+          <td>
+            <a class="unmark_as_group" href="#" data-name="{{this}}" title="Удалить признак группы"><i class='icon-remove'></i></a>
+          </td>
+        </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</script>
+
+<script id="forwards_list_tmpl" type="text/x-handlebars-template">
+  <table id="table_forwards_list" class="table table-condensed">
+    <thead>
+      <tr>
+        <th>Кому</th>
+        <th>Оставлять копию</th>
+        <th>Удалить</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{#each items}}
+        {{#if this.enabled}}
+          <tr>
+            <td class='no_select_on_dbl_click'>
+              {{this.filter_param}}
+            </td>
+            <td>
+              <input type="checkbox" class="keep_copy" data-id="{{this.id}}" data-from="{{this.from}}" data-to="{{this.filter_param}}" {{#if this.copy}}checked{{/if}}>
+            </td>
+            <td>
+              <a class="remove_forwarding" href="#" data-from="{{this.from}}" data-id="{{this.id}}" title="Удалить"><i class='icon-remove'></i></a>
+            </td>
+          </tr>
+        {{/if}}
+      {{/each}}
+    </tbody>
+  </table>
+</script>
+
+<script id="recieves_list_tmpl" type="text/x-handlebars-template">
+    
+      <table id="table_forwards_list" class="table table-condensed">
+        <thead>
+          <tr>
+            <th>От кого</th>
+            <th>Удалить</th>
+          </tr>
+        </thead>
+        <tbody>
+          {{#each items}}
+            {{#if this.enabled}}
+              <tr>
+                <td class='no_select_on_dbl_click'>
+                  {{this.filter_param}}
+                </td>
+                <td>
+                  <a class="remove_sender" href="#" data-from="{{this.filter_param}}" data-id="{{this.id}}" title="Удалить"><i class='icon-remove'></i></a>
+                </td>
+              </tr>
+            {{/if}}
+          {{/each}}
+        </tbody>
+      </table>
+    
+</script>
+
+<script id="view_user_tmpl" type="text/x-handlebars-template">
+  <div id="div_user_info" class="modal hide fade">
+    <div class="modal-header">
+      <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+      <h3>{{ login }}</h3>
+    </div>
+    <div class="modal-body">
+    <div class="accordion" id="accordion1">
+      <div class="accordion-group">
+        <div class="accordion-heading">
+          <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseOne">
+            Основное
+          </a>
+        </div>
+        <div id="collapseOne" class="accordion-body collapse {{#if is_group}} {{else}} in {{/if}}" style="height: {{#if is_group}} 0px {{else}} auto {{/if}}; ">
+          <div class="accordion-inner">
+            <form class="form-horizontal">
+              <div class="control-group">
+                <label class="control-label" for="user_info_input_login">Login</label>
+                <div class="controls">
+                  <input type="text" id="user_info_input_login" value="{{ login }}" {{#if new_user}}sfsdf{{/if}}disabled>
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="user_info_input_password">Password</label>
+                <div class="controls">
+                  <input type="text" id="user_info_input_password">
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-group">
+        <div class="accordion-heading">
+          <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseTwo">
+            Дополнительное
+          </a>
+        </div>
+        <div id="collapseTwo" class="accordion-body collapse" style="height: 0px; ">
+          <div class="accordion-inner">
+            <form class="form-horizontal">
+              <div class="control-group">
+                <label class="control-label" for="user_info_input_iname">Имя</label>
+                <div class="controls">
+                  <input type="text" id="user_info_input_iname" value="{{iname}}">
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="user_info_input_fname">Фамилия</label>
+                <div class="controls">
+                  <input type="text" id="user_info_input_fname" value="{{fname}}">
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="user_info_input_bdate">Дата рождения</label>
+                <div class="controls">
+                  <input type="text" id="user_info_input_bdate" placeholder="дд.мм.гггг" value="{{birth_date}}" disabled>
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="user_info_input_hintq">Секретный вопрос</label>
+                <div class="controls">
+                  <input type="text" id="user_info_hintq" value="{{hintq}}" disabled>
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="user_info_input_hinta">Секретный ответ</label>
+                <div class="controls">
+                  <input type="text" id="user_info_hinta" value="{{hinta}}" disabled>
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="user_info_sex_1">Пол</label>
+                <div class="controls">
+                  <label class="radio inline">
+                    <input type="radio" id="user_info_sex_1" name="radio_sex" value="1" {{#if sex_male}}checked{{/if}}>
+                    М
+                  </label>
+                  <label class="radio inline">
+                    <input type="radio" id="user_info_sex_2" name="radio_sex" value="2" {{#if sex_female}}checked{{/if}}>
+                    Ж
+                  </label>
+                </div>
+              </div>
+              <div class="control-group">
+                <label class="control-label" for="user_info_eula">Публичная оферта подписана</label>
+                <div class="controls">
+                  <input type="checkbox" id="user_info_eula" value="1" {{#if signed_eula}}checked{{/if}} disabled>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      <div class="accordion-group">
+        <div class="accordion-heading">
+          <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" href="#collapseThree">
+            Отправляет в
+          </a>
+        </div>
+        <div id="collapseThree" class="accordion-body collapse {{#if is_group}} in {{else}} {{/if}}" style="height: {{#if is_group}} auto {{else}} 0px {{/if}};">
+          <div class="accordion-inner">
+            <div id="div_add_forward" class="input-append">
+               <input type="text" id="input_add_forward" data-from="{{login}}" placeholder="Email">
+               <button id="btn_add_forward" class="btn btn-primary" data-from="{{login}}"><i class="icon-plus"></i> Добавить</button>
+            </div>
+            <div id="modal_forwards_list">
+            </div>  
+          </div>
+        </div>
+      </div>
+      <div class="accordion-group">
+        <div class="accordion-heading">
+          <a class="accordion-toggle" data-toggle="collapse" data-parent="#accordion1" rel="tooltip" data-placement="left" data-original-title="Из списка групп домена" href="#collapseFour">
+            Состоит в группах
+          </a>
+        </div>
+        <div id="collapseFour" class="accordion-body collapse" style="height: 0px;">
+          <div class="accordion-inner">
+            <div id="modal_recieves_list">
+            </div>  
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="div_modal_error" class="alert alert-error" style="display: none;">
+      <button type="button" class="close" data-dismiss="alert">×</button>
+    </div>
+    <div id="div_modal_message" class="alert alert-info" style="display: none;">
+      <button type="button" class="close" data-dismiss="alert">×</button>
+    </div>
+    <div id="div_modal_debug" class="alert alert-info" style="display: none;">
+      <button type="button" class="close" data-dismiss="alert">×</button>
+    </div>
+    <div class="modal-footer">
+      <button id="btn_cancel_changes" class="btn" data-dismiss="modal">Отмена</button>
+      <button id="btn_save_user" class="btn btn-primary">Сохранить</button>
+    </div>
+  </div>
+</script>

@@ -32,6 +32,7 @@ class Base(object):
         if method.lower() == 'post':
             fp = urllib.request.urlopen(url, params)
         else:
+            print(url+'?'+params)
             fp = urllib.request.urlopen(url + '?' + params)
 
 #        self.log('Preform request at url: %s ', url)
@@ -59,7 +60,7 @@ class Base(object):
 class ActionException(Exception):
     def __init__(self, message, url, params):
         self.message = message
-        message += ' Request: [url %s] [params %s]' % (url, params)
+        self.message += ' Request: [url %s] [params %s]' % (url, params)
         super(ActionException, self).__init__(message)
     
     def __str__(self):
@@ -271,6 +272,99 @@ class UserApi(Base):
     '''
     def createAll(self, domain, name):
         return self.invokeHandler('create_general_maillist', {'domain' : domain, 'ml_name': name})
+
+
+class UserApiMultiadmin(Base):
+    '''
+    Отличается от UserApi обработчиком ошибок, так как формат ответа другой
+    '''
+    def __init__(self, token, logger = None):
+        self._token = token
+        super().__init__(logger)
+
+    def invokeHandler(self, handler_name, params):
+        if 'token' not in params:
+              params['token'] = self._token
+
+        return super().invokeHandler(handler_name, params)
+
+    def checkError(self, xml, url, params):
+        error = xml.findtext('.//error')
+        if error is not None:
+            raise ActionException(error, url, params)
+
+    def get_admins(self, domain):
+        '''
+        Получает список дополнетельных администраторов домена
+        '''
+        xml = self.invokeHandler('api/multiadmin/get_admins', {'domain': domain})
+        admins = xml.findall('.//login')
+        return [i.text for i in admins]
+
+    def remove_domain_admin(self, name, domain):
+        '''
+        Удаляет дополнительного администратора
+        '''
+        return self.invokeHandler('api/multiadmin/del_admin', {'domain': domain, 'login': name})
+
+    def add_domain_admin(self, name, domain):
+        return self.invokeHandler('api/multiadmin/add_admin', {'domain': domain, 'login': name})
+
+    def set_domain_default_email(self, name, domain):
+        return self.invokeHandler('api/reg_default_user', {'domain': domain, 'login': name})
+
+    def delete_domain_logo(self, domain):
+        return self.invokeHandler('api/del_logo', {'domain': domain})
+
+    def delete_domain(self, domain):
+        return self.invokeHandler('api/del_domain', {'domain': domain})
+
+class UserApiMultiadminPost(Base):
+    '''
+    Отправляет данные с помощью POST-запроса
+    '''
+    def __init__(self, token, logger = None):
+        self._token = token
+        super().__init__(logger)
+
+    def invokeHandler(self, handler_name, params):
+        if 'token' not in params:
+              params['token'] = self._token
+        url = self.API_BASE_URL + handler_name + '.xml'
+        req1 = urllib.request.Request(url)
+        # request.add_header('User-agent', 'PyMOTW (http://www.doughellmann.com/PyMOTW/)')
+        req1.add_header('Content-type', params['form'].get_content_type())
+        req1.add_header('Content-length', len(params['form'].form_data))
+        req1.add_data(params['form'].form_data)
+        print(dir(req1))
+        print('full_url', req1.get_full_url())
+        print('type', req1.type)
+        print('host', req1.host)
+        print('headers', req1.headers)
+        print('method', req1.method)
+        print('header_items', req1.header_items)
+        print('selector', req1.selector)
+        fp = urllib.request.urlopen(req1)
+        result = fp.read()
+        self.log(result)
+
+        if not result:
+            return
+
+        xml = etree.XML(result)
+        
+        self.checkError(xml, url, params)
+
+        return xml
+
+    def checkError(self, xml, url, params):
+        error = xml.findtext('.//error')
+        if error is not None:
+            raise ActionException(error, url, params)
+
+    def set_new_domain_logo(self, form, domain):
+        return self.invokeHandler('api/add_logo', {'domain': domain, 'form': form})
+
 
 class RegistrarApi(Base):
 
