@@ -46,7 +46,7 @@ def make_head(mycgi, environ):
     '''
     Возвращает начальную страницу приложения
     '''
-    return [open('apps/templates/main.html', 'r').read().encode('utf-8')]
+    return [open('apps/templates/main.html', mode='r', encoding='utf-8').read().encode('utf-8')]
 
 
 # @dumpencode
