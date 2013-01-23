@@ -2,12 +2,10 @@
 '''
     Разные маленькие утилитки
 '''
-import json
 from cgi import FieldStorage
 
 from config import settings
 from lib import util
-from lib.YandexMail import ActionException
 from lib.decorators import dumpencode
 
 api = settings.API

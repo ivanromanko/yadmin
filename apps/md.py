@@ -65,7 +65,7 @@ def add_domain_admin(mycgi, environ):
 
 
 @dumpencode
-@tryex()
+@tryex('Введите логин пользователя без @имя_домена')
 def set_default_domain_email(mycgi, environ):
     apimulti[mycgi['domain']].set_domain_default_email(mycgi['name'], mycgi['domain'])
     return {'success': 1}

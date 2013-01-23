@@ -12,7 +12,7 @@ def main(env, start_response):
     file = "static/{}".format(file)
     ret = ''
     try:
-        fh = open(file)
+        fh = open(file, encoding='utf-8')
         for s in fh.readlines():
             ret += s
         fh.close() 

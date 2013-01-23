@@ -67,6 +67,7 @@ function set_default_domain_email(name, domain){
               $("#btn_set_default_domain_email").removeClass('btn-success');
           }, 3000);
           $("#new_default_domain_email").val('');
+          $("#divError").hide();
         } else{
           $("#btn_set_default_domain_email").toggleClass('btn-danger');
           setTimeout(function () {
