@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import re
+import os
 
 def main(env, start_response):
     '''
@@ -9,7 +10,7 @@ def main(env, start_response):
     Не бинарные
     '''
     file = re.search('^\/([^/]+)\/(.+)?',env['PATH_INFO']).group(2)
-    file = "static/{}".format(file)
+    file = os.path.join(os.path.split(__file__)[0],os.path.pardir,"static/{}".format(file))
     ret = ''
     try:
         fh = open(file, encoding='utf-8')

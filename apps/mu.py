@@ -7,6 +7,7 @@ Module for user managment
 '''
 from cgi import FieldStorage
 import json
+import os
 
 from lib import util
 from lib.YandexMail import ActionException
@@ -46,7 +47,8 @@ def make_head(mycgi, environ):
     '''
     Возвращает начальную страницу приложения
     '''
-    return [open('apps/templates/main.html', mode='r', encoding='utf-8').read().encode('utf-8')]
+    print(os.path.split(__file__))
+    return [open(os.path.join(os.path.split(__file__)[0],'templates/main.html'), mode='r', encoding='utf-8').read().encode('utf-8')]
 
 
 # @dumpencode
