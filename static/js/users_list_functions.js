@@ -85,12 +85,14 @@ function convert_users_to_list(users){
 }
 
 function refresh_users_list(){
+  var spinner = new Spinner().spin($('#shared_space')[0]);
   return $.getJSON('/mu', {do_what: 'refresh_users_list'}).done(function(data){
       if (data.success){
           $.each(data.items, function(key, val){
               localStorage.setItem('yadmin_users_'+key, JSON.stringify(convert_users_to_list(val)));    
           })
           console.log('Список пользователей обновлён');
+          spinner.stop();
       } 
   });
 }
