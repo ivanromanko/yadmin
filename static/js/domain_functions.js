@@ -111,3 +111,21 @@ function delete_domain(domain){
     })
 }
 
+function make_emails_csv_link(){
+  $('.csv_link').each(function(){
+    var $this = $(this),
+        str4csv = 'Имя,Фамилия,Адрес электронной почты\n';
+    $.each(JSON.parse(localStorage.getItem('yadmin_users_'+$this.data('domain'))), function(){
+      tmp = this.split('.');
+      if (tmp.length > 1){
+        str4csv += tmp[0].charAt(0).toUpperCase() + tmp[0].slice(1) + ',' + tmp[1].charAt(0).toUpperCase() + tmp[1].slice(1) + ',' + this + '@' + $this.data('domain') + '\n';  
+      } else {
+        str4csv += tmp[0] + ',' + ',' + this + '@' + $this.data('domain') + '\n';
+      }
+      
+    })
+    $this.attr('href', 'data:application/csv;charset=utf-8,' + encodeURIComponent(str4csv));
+  })
+  
+}
+

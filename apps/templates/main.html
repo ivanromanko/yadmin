@@ -5,6 +5,7 @@
       <title>Управление учётными записями </title>
 
       <!-- <link rel="stylesheet" href="/static/css/bootstrap.css"> -->
+      <link rel="shortcut icon" href="http://twitter.github.io/bootstrap/assets/ico/favicon.png">
       <link rel="stylesheet" href="http://yandex.st/bootstrap/2.3.1/css/bootstrap.min.css">
       <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
 
@@ -222,6 +223,7 @@
       </button>
       <ul class='dropdown-menu'>
           <li><a href="#" class="domain_properties" data-domain="{{ this }}">Настройки домена</a></li>
+          <li><a href="#" download="AddressBook.csv" class="csv_link" data-domain="{{ this }}">get csv</a></li>
       </ul>
     </div>
   {{/each}}

@@ -36,6 +36,7 @@ function draw_table(users, tmpl, target){
   // Обновляем таблицу
   var users_template = Handlebars.compile($('#'+tmpl).html());
   $("#"+target).empty().append(users_template({items: users}));
+  make_emails_csv_link();
 }
 
 function mark_as_group(name){
