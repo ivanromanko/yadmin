@@ -10,7 +10,7 @@
       <link rel="stylesheet" href="/static/css/bootstrap_custom.css">
 
       <script src="/static/js/jquery.min.js"></script>
-      <script src="/static/js/handlebars-1.0.0.beta.6.js"></script>
+      <script src="/static/js/handlebars-1.0.0.js"></script>
       <script src="http://fgnass.github.com/spin.js/dist/spin.min.js"></script>
       <script src="/static/js/otclass.js"></script>
       <script src="/static/js/otmes.js"></script>
@@ -21,6 +21,7 @@
       <script src="/static/js/users_list_events.js"></script>
       <script src="/static/js/modal_window_events.js"></script>
       <script src="/static/js/modal_window_functions.js"></script>
+      <script src="/static/js/umb-handlebars.js"></script>
 
       <script type="text/javascript">
           $(document).ready(function(){
@@ -298,10 +299,10 @@
     </thead>
     <tbody>
       {{#each items}}
-        {{#if this.enabled}}
+        {{#if this.show}}
           <tr>
             <td class='no_select_on_dbl_click'>
-              {{this.filter_param}}
+              {{{this.filter_param}}}
             </td>
             <td>
               <input type="checkbox" class="keep_copy" data-id="{{this.id}}" data-from="{{this.from}}" data-to="{{this.filter_param}}" {{#if this.copy}}checked{{/if}}>

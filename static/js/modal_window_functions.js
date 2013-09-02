@@ -163,9 +163,18 @@ function add_user(){
 }
 
 function get_forwards_list(login){
-  return $.getJSON('/mu', {do_what: 'get_forwards_list', login: login, domain: localStorage.getItem('current_domain')}).done(function(data){
+  return $.getJSON('/mu', {do_what: 'get_forwards_list', login: login, domain: localStorage.getItem('current_domain')})
+  .done(function(data){
+    $.each(data.items, function(){
+        if (this.enabled){
+            this['show'] = 1;
+        } else {
+            this.filter_param = '<small>'+this.filter_param+' (Возможно ожидает подтверждения email-адреса)'+'</small>'
+            this['show'] = 1;
+        }
+    })
     var forwards_list_tmpl = Handlebars.compile($("#forwards_list_tmpl").html());
-    // console.log(data);
+    console.log(data);
     $('#modal_forwards_list').html(forwards_list_tmpl(data));
   })
 }
