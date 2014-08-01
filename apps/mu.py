@@ -101,11 +101,11 @@ def refresh_users_list(mycgi, environ):
     for i in api:
         users[i] = []
         number_of_users = int(api[i].getUsersNumber())
-        page=0
+        page=1
         while number_of_users > 0:
             users[i] += api[i].getUsersList(page=page, perpage=100)
             number_of_users -= 100
-            page += 100
+            page += 1
         users[i] = sorted(users[i], key=lambda x: x['name'])
     return {'items': users, 'success': 1}
 
